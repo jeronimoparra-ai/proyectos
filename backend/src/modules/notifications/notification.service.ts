@@ -1,4 +1,5 @@
 import { supabase } from '../../database/supabase';
+import { env } from '../../config/env';
 import { createAppError } from '../../middleware/error.middleware';
 import type { RegisterPushTokenInput } from './notification.schema';
 
@@ -116,9 +117,14 @@ export class NotificationService {
     }));
 
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (env.expoAccessToken) {
+        headers['Authorization'] = `Bearer ${env.expoAccessToken}`;
+      }
+
       const response = await fetch(EXPO_PUSH_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(messages),
       });
 

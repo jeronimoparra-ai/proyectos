@@ -14,4 +14,5 @@ export const env = {
   googleClientId: process.env.GOOGLE_CLIENT_ID ?? '',
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
   braveSearchApiKey: process.env.BRAVE_SEARCH_API_KEY ?? '',
+  expoAccessToken: process.env.EXPO_ACCESS_TOKEN ?? '',
 } as const;
