@@ -14,6 +14,8 @@ import { aiRoutes } from './modules/ai/ai.routes';
 import { academicTaskRoutes } from './modules/academic/academic-task.routes';
 import { webSearchRoutes } from './modules/web-search/web-search.routes';
 import { reviewRoutes } from './modules/reviews/review.routes';
+import { notificationRoutes } from './modules/notifications/notification.routes';
+import { startReminderChecker } from './modules/reminders/reminder-checker';
 
 const app = express();
 
@@ -51,7 +53,10 @@ app.use('/api/ai', apiLimiter, aiRoutes);
 app.use('/api/academic', apiLimiter, academicTaskRoutes);
 app.use('/api/search', apiLimiter, webSearchRoutes);
 app.use('/api/reviews', apiLimiter, reviewRoutes);
+app.use('/api/notifications', apiLimiter, notificationRoutes);
 
 app.use(errorHandler);
+
+startReminderChecker();
 
 export { app };

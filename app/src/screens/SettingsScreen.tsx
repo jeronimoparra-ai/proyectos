@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,9 +9,11 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
 import { useAuthStore, useAppStore } from '../store';
 import { supabase } from '../services/supabase';
+import { notificationService } from '../services/notification';
 import type { ColorScheme } from '../types';
 
 const THEME_OPTIONS: { label: string; value: ColorScheme }[] = [
@@ -27,6 +29,11 @@ export function SettingsScreen() {
   const [displayName, setDisplayName] = useState(user?.display_name ?? '');
   const [isSaving, setIsSaving] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
+  const [unreadCount, setUnreadCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    notificationService.getUnreadCount().then(setUnreadCount).catch(() => {});
+  }, []);
 
   const handleSaveName = async () => {
     if (!displayName.trim()) {
@@ -143,6 +150,22 @@ export function SettingsScreen() {
         </View>
       </View>
 
+      <View style={[styles.section, { backgroundColor: colors.surface, borderRadius: borderRadius.lg }]}>
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Notifications</Text>
+        <View style={styles.notificationRow}>
+          <Ionicons name="notifications-outline" size={20} color={colors.textSecondary} />
+          <Text style={[styles.fieldValue, { color: colors.text, flex: 1 }]}>
+            {unreadCount !== null ? `${unreadCount} unread` : 'Loading...'}
+          </Text>
+          <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+            <Text style={styles.badgeText}>{unreadCount ?? 0}</Text>
+          </View>
+        </View>
+        <Text style={[styles.hint, { color: colors.textTertiary }]}>
+          Push notifications are enabled for reminders and tasks
+        </Text>
+      </View>
+
       <TouchableOpacity
         style={[styles.signOutButton, { borderColor: colors.error, borderRadius: borderRadius.md }]}
         onPress={handleSignOut}
@@ -232,5 +255,26 @@ const styles = StyleSheet.create({
   signOutText: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  notificationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  badge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    minWidth: 32,
+    alignItems: 'center',
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  hint: {
+    fontSize: 13,
+    marginTop: 4,
   },
 });
