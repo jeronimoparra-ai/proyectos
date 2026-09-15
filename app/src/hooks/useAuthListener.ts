@@ -9,6 +9,7 @@ export function useAuthListener() {
   useEffect(() => {
     if (!supabase) {
       setUser(null);
+      setLoading(false);
       return;
     }
 

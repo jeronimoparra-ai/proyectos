@@ -5,7 +5,11 @@
   "build": {
     "preview": {
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "env": {
+          "EXPO_PUBLIC_SUPABASE_URL": "https://tu-proyecto.supabase.co",
+          "EXPO_PUBLIC_SUPABASE_ANON_KEY": "tu-anon-key"
+        }
       },
       "distribution": "internal"
     },

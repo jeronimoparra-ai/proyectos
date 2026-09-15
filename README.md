@@ -38,6 +38,21 @@ Haz clic en el botón para descargar la última versión:
 > 3. Si es necesario, permite instalación de fuentes desconocidas
 > 4. Instala y abre la app
 
+> ⚠️ **Nota:** Si al abrir la app muestra un mensaje de "Configuración necesaria", las variables de entorno de Supabase no están configuradas. La app ahora muestra un mensaje explicando qué falta y ofrece un botón "Reintentar". Para funcionalidad completa, reconstruye la app con tu cuenta de Supabase configurada.
+
+### Opción 2: Build yourself
+
+```bash
+# Instalar EAS CLI
+npm install -g eas-cli
+
+# Login
+eas login
+
+# Build APK
+eas build --profile preview --platform android
+```
+
 ### Opción 2: Build yourself
 
 ```bash

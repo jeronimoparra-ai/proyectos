@@ -9,6 +9,8 @@ const REQUIRED_VARS = ['EXPO_PUBLIC_SUPABASE_URL', 'EXPO_PUBLIC_SUPABASE_ANON_KE
 const WARNINGS: Record<string, string> = {
   EXPO_PUBLIC_API_URL:
     'EXPO_PUBLIC_API_URL no está configurada. Se usa http://localhost:3000 por defecto, que no es alcanzable desde un dispositivo real.',
+  MISSING_SUPABASE:
+    'Variables de Supabase faltantes. La app funcionará en modo limitado sin configuración backend.',
 };
 
 export function validateEnv(): EnvValidation {
@@ -29,6 +31,10 @@ export function validateEnv(): EnvValidation {
     } else if (!apiUrl || apiUrl.trim() === '') {
       warnings.push(WARNINGS.EXPO_PUBLIC_API_URL);
     }
+  }
+
+  if (missingVars.length > 0) {
+    warnings.push(WARNINGS.MISSING_SUPABASE);
   }
 
   return {
