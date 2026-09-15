@@ -11,22 +11,40 @@ import {
 } from 'react-native';
 import { useTheme } from '../hooks';
 import { useTaskStore } from '../store/useTaskStore';
+import { DateInput } from '../components/DateInput';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TaskForm'>;
 
+function parseDateOrNull(dateStr: string | null): Date | null {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function toDateString(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function toTimeString(date: Date): string {
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
 export function TaskFormScreen({ navigation, route }: Props) {
   const { taskId } = route.params ?? {};
-  const { colors, borderRadius } = useTheme();
+  const { colors, borderRadius, insets } = useTheme();
   const { selectedTask, loadTask, createTask, updateTask, clearSelectedTask } = useTaskStore();
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [dueDate, setDueDate] = useState('');
-  const [dueTime, setDueTime] = useState('');
+  const [dueDate, setDueDate] = useState<Date | null>(null);
+  const [dueTime, setDueTime] = useState<Date | null>(null);
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
 
   useEffect(() => {
@@ -35,14 +53,14 @@ export function TaskFormScreen({ navigation, route }: Props) {
       loadTask(taskId).finally(() => setIsLoading(false));
     }
     return () => clearSelectedTask();
-  }, [taskId]);
+  }, [taskId, loadTask, clearSelectedTask]);
 
   useEffect(() => {
     if (selectedTask && taskId) {
       setTitle(selectedTask.title);
       setDescription(selectedTask.description ?? '');
-      setDueDate(selectedTask.due_date ?? '');
-      setDueTime(selectedTask.due_time ?? '');
+      setDueDate(parseDateOrNull(selectedTask.due_date));
+      setDueTime(parseDateOrNull(selectedTask.due_time));
       setPriority(selectedTask.priority);
     }
   }, [selectedTask, taskId]);
@@ -59,16 +77,16 @@ export function TaskFormScreen({ navigation, route }: Props) {
         await updateTask(taskId, {
           title: title.trim(),
           description: description.trim() || undefined,
-          due_date: dueDate || undefined,
-          due_time: dueTime || undefined,
+          due_date: dueDate ? toDateString(dueDate) : undefined,
+          due_time: dueTime ? toTimeString(dueTime) : undefined,
           priority,
         });
       } else {
         await createTask({
           title: title.trim(),
           description: description.trim() || undefined,
-          due_date: dueDate || undefined,
-          due_time: dueTime || undefined,
+          due_date: dueDate ? toDateString(dueDate) : undefined,
+          due_time: dueTime ? toTimeString(dueTime) : undefined,
           priority,
         });
       }
@@ -90,7 +108,7 @@ export function TaskFormScreen({ navigation, route }: Props) {
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={[styles.backButton, { color: colors.primary }]}>← Back</Text>
         </TouchableOpacity>
@@ -136,37 +154,22 @@ export function TaskFormScreen({ navigation, route }: Props) {
         </View>
 
         <View style={styles.row}>
-          <View style={[styles.field, { flex: 1 }]}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Due Date</Text>
-            <TextInput
-              style={[styles.input, {
-                backgroundColor: colors.surfaceVariant,
-                color: colors.text,
-                borderColor: colors.border,
-                borderRadius: borderRadius.md,
-              }]}
+          <View style={{ flex: 1 }}>
+            <DateInput
+              label="Due Date"
               value={dueDate}
-              onChangeText={setDueDate}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={colors.textTertiary}
-              keyboardType="numbers-and-punctuation"
+              onChange={setDueDate}
+              mode="date"
+              placeholder="Select date"
             />
           </View>
-
-          <View style={[styles.field, { flex: 1 }]}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Due Time</Text>
-            <TextInput
-              style={[styles.input, {
-                backgroundColor: colors.surfaceVariant,
-                color: colors.text,
-                borderColor: colors.border,
-                borderRadius: borderRadius.md,
-              }]}
+          <View style={{ flex: 1 }}>
+            <DateInput
+              label="Due Time"
               value={dueTime}
-              onChangeText={setDueTime}
-              placeholder="HH:MM"
-              placeholderTextColor={colors.textTertiary}
-              keyboardType="numbers-and-punctuation"
+              onChange={setDueTime}
+              mode="time"
+              placeholder="Select time"
             />
           </View>
         </View>
@@ -226,7 +229,6 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 16,
-    paddingTop: 60,
     paddingBottom: 16,
   },
   backButton: {

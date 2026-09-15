@@ -1,4 +1,5 @@
 import { supabase } from '../../database/supabase';
+import { env } from '../../config/env';
 import { createAppError } from '../../middleware/error.middleware';
 import type { RegisterInput, LoginInput, ForgotPasswordInput } from './auth.schema';
 
@@ -94,7 +95,7 @@ export class AuthService {
 
   async forgotPassword(data: ForgotPasswordInput) {
     const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
-      redirectTo: `${process.env.FRONTEND_URL ?? 'http://localhost:8081'}/reset-password`,
+      redirectTo: `${env.frontendUrl}/reset-password`,
     });
 
     if (error) {

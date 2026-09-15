@@ -2,6 +2,7 @@
   "expo": {
     "name": "ProductivityApp",
     "slug": "productivity-app",
+    "owner": "jerodev",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -17,17 +18,19 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.productivityapp"
+      "package": "com.jerodev.productivityapp",
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-secure-store"
+      "expo-secure-store",
+      "@react-native-community/datetimepicker"
     ],
     "extra": {
       "eas": {
-        "projectId": "your-project-id"
+        "projectId": "4c2e8f06-25c6-4767-aa8e-5bdabdc70cdf"
       }
     }
   }

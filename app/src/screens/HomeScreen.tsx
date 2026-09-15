@@ -10,7 +10,7 @@ type HomeNavProp = NativeStackNavigationProp<RootStackParamList>;
 
 export function HomeScreen() {
   const navigation = useNavigation<HomeNavProp>();
-  const { colors, borderRadius } = useTheme();
+  const { colors, borderRadius, insets } = useTheme();
   const {
     dueReviews,
     reviewStats,
@@ -27,11 +27,11 @@ export function HomeScreen() {
     loadReviewStats();
     loadFeedback();
     loadRecommendations();
-  }, []);
+  }, [loadDueReviews, loadReviewStats, loadFeedback, loadRecommendations]);
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <Text style={[styles.greeting, { color: colors.text }]}>Welcome back!</Text>
       </View>
 
@@ -125,7 +125,6 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 16,
-    paddingTop: 60,
     paddingBottom: 16,
   },
   greeting: {

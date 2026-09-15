@@ -22,7 +22,7 @@ interface Material {
 }
 
 export function AcademicTaskFormScreen({ navigation }: Props) {
-  const { colors, borderRadius } = useTheme();
+  const { colors, borderRadius, insets } = useTheme();
   const { createTask } = useAcademicTaskStore();
   const [isSaving, setIsSaving] = useState(false);
 
@@ -72,7 +72,7 @@ export function AcademicTaskFormScreen({ navigation }: Props) {
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={[styles.backButton, { color: colors.primary }]}>← Back</Text>
         </TouchableOpacity>
@@ -186,7 +186,6 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 16,
-    paddingTop: 60,
     paddingBottom: 16,
   },
   backButton: {

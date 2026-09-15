@@ -1,4 +1,5 @@
 import { apiClient } from './api';
+import { supabase } from './supabase';
 import type { AcademicTask } from '../types';
 
 export interface Review {
@@ -42,8 +43,14 @@ export interface WeeklyFeedback {
 }
 
 class ReviewService {
+  private async getToken(): Promise<string> {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token ?? '';
+  }
+
   async getDueReviews(limit: number = 10): Promise<AcademicTask[]> {
-    return apiClient.get<AcademicTask[]>(`/reviews/due?limit=${limit}`);
+    const token = await this.getToken();
+    return apiClient.get<AcademicTask[]>(`/reviews/due?limit=${limit}`, token);
   }
 
   async recordReview(data: {
@@ -52,28 +59,34 @@ class ReviewService {
     difficulty?: number;
     time_spent_seconds?: number;
   }): Promise<ReviewResult> {
-    return apiClient.post<ReviewResult>('/reviews', data);
+    const token = await this.getToken();
+    return apiClient.post<ReviewResult>('/reviews', data, token);
   }
 
   async getReviewHistory(taskId: string): Promise<Review[]> {
-    return apiClient.get<Review[]>(`/reviews/history/${taskId}`);
+    const token = await this.getToken();
+    return apiClient.get<Review[]>(`/reviews/history/${taskId}`, token);
   }
 
   async getReviewStats(): Promise<ReviewStats> {
-    return apiClient.get<ReviewStats>('/reviews/stats');
+    const token = await this.getToken();
+    return apiClient.get<ReviewStats>('/reviews/stats', token);
   }
 
   async getWeeklyFeedback(): Promise<WeeklyFeedback> {
-    return apiClient.get<WeeklyFeedback>('/reviews/feedback');
+    const token = await this.getToken();
+    return apiClient.get<WeeklyFeedback>('/reviews/feedback', token);
   }
 
   async getRecommendations(): Promise<string[]> {
-    const response = await apiClient.get<{ recommendations: string[] }>('/reviews/recommendations');
+    const token = await this.getToken();
+    const response = await apiClient.get<{ recommendations: string[] }>('/reviews/recommendations', token);
     return response.recommendations;
   }
 
   async initializeForTask(taskId: string): Promise<{ message: string }> {
-    return apiClient.post<{ message: string }>(`/reviews/initialize/${taskId}`, {});
+    const token = await this.getToken();
+    return apiClient.post<{ message: string }>(`/reviews/initialize/${taskId}`, {}, token);
   }
 }
 

@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import morgan from 'morgan';
+import rateLimit from 'express-rate-limit';
 import { env } from './config/env';
 import { errorHandler } from './middleware/error.middleware';
 import { authRoutes } from './modules/auth/auth.routes';
@@ -17,21 +19,38 @@ const app = express();
 
 app.use(helmet());
 app.use(cors({ origin: env.corsOrigin, credentials: true }));
+app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
 app.use(express.json({ limit: '10mb' }));
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many requests, please try again later' },
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many authentication attempts, please try again later' },
+});
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.use('/api/auth', authRoutes);
-app.use('/api/tasks', taskRoutes);
-app.use('/api/reminders', reminderRoutes);
-app.use('/api/events', eventRoutes);
-app.use('/api/google', googleCalendarRoutes);
-app.use('/api/ai', aiRoutes);
-app.use('/api/academic', academicTaskRoutes);
-app.use('/api/search', webSearchRoutes);
-app.use('/api/reviews', reviewRoutes);
+app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/tasks', apiLimiter, taskRoutes);
+app.use('/api/reminders', apiLimiter, reminderRoutes);
+app.use('/api/events', apiLimiter, eventRoutes);
+app.use('/api/google', apiLimiter, googleCalendarRoutes);
+app.use('/api/ai', apiLimiter, aiRoutes);
+app.use('/api/academic', apiLimiter, academicTaskRoutes);
+app.use('/api/search', apiLimiter, webSearchRoutes);
+app.use('/api/reviews', apiLimiter, reviewRoutes);
 
 app.use(errorHandler);
 

@@ -78,6 +78,7 @@ CREATE TABLE tasks (
   color VARCHAR(7),
   is_recurring BOOLEAN DEFAULT FALSE,
   recurrence_rule JSONB,
+  completed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   deleted_at TIMESTAMPTZ
@@ -232,6 +233,8 @@ CREATE TABLE academic_tasks (
   questions JSONB,
   ai_model VARCHAR(100),
   ai_processed_at TIMESTAMPTZ,
+  next_review_at TIMESTAMPTZ,
+  review_count INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   deleted_at TIMESTAMPTZ
@@ -310,6 +313,41 @@ CREATE POLICY "Users can manage own topics"
   );
 
 -- ============================================================
+-- REVIEWS (Spaced Repetition - SM-2)
+-- ============================================================
+CREATE TABLE reviews (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  academic_task_id UUID NOT NULL REFERENCES academic_tasks(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  quality INTEGER NOT NULL CHECK (quality BETWEEN 0 AND 5),
+  difficulty REAL,
+  time_spent_seconds INTEGER,
+  ease_factor REAL NOT NULL DEFAULT 2.5,
+  interval INTEGER NOT NULL DEFAULT 0,
+  repetitions INTEGER NOT NULL DEFAULT 0,
+  next_review_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_reviews_academic_task_id ON reviews(academic_task_id);
+CREATE INDEX idx_reviews_user_id ON reviews(user_id);
+CREATE INDEX idx_reviews_next_review_at ON reviews(next_review_at);
+
+ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own reviews"
+  ON reviews FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own reviews"
+  ON reviews FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can manage own reviews"
+  ON reviews FOR ALL
+  USING (auth.uid() = user_id);
+
+-- ============================================================
 -- USER_PREFERENCES
 -- ============================================================
 CREATE TABLE user_preferences (
@@ -376,3 +414,93 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+
+-- ============================================================
+-- NOTIFICATIONS
+-- ============================================================
+CREATE TABLE notifications (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  title VARCHAR(255) NOT NULL,
+  body TEXT NOT NULL,
+  type VARCHAR(50) NOT NULL DEFAULT 'general',
+  read_at TIMESTAMPTZ,
+  data JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX idx_notifications_read_at ON notifications(read_at);
+
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own notifications"
+  ON notifications FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own notifications"
+  ON notifications FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own notifications"
+  ON notifications FOR UPDATE
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own notifications"
+  ON notifications FOR DELETE
+  USING (auth.uid() = user_id);
+
+-- ============================================================
+-- AI_INTERACTIONS
+-- ============================================================
+CREATE TABLE ai_interactions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  model VARCHAR(100) NOT NULL,
+  prompt TEXT NOT NULL,
+  response TEXT,
+  tokens_used INTEGER,
+  duration_ms INTEGER,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_ai_interactions_user_id ON ai_interactions(user_id);
+
+ALTER TABLE ai_interactions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own AI interactions"
+  ON ai_interactions FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own AI interactions"
+  ON ai_interactions FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+-- ============================================================
+-- CALENDAR_INTEGRATIONS
+-- ============================================================
+CREATE TABLE calendar_integrations (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  provider VARCHAR(20) NOT NULL CHECK (provider IN ('google')),
+  access_token TEXT NOT NULL,
+  refresh_token TEXT,
+  token_expires_at TIMESTAMPTZ,
+  calendar_id VARCHAR(255),
+  sync_enabled BOOLEAN DEFAULT TRUE,
+  last_synced_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_calendar_integrations_user_id ON calendar_integrations(user_id);
+
+ALTER TABLE calendar_integrations ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can manage own calendar integrations"
+  ON calendar_integrations FOR ALL
+  USING (auth.uid() = user_id);
+
+CREATE TRIGGER update_calendar_integrations_updated_at
+  BEFORE UPDATE ON calendar_integrations
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

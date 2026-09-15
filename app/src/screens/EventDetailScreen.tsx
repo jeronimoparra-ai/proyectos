@@ -22,13 +22,13 @@ const sourceLabels: Record<string, string> = {
 
 export function EventDetailScreen({ navigation, route }: Props) {
   const { eventId } = route.params;
-  const { colors, borderRadius } = useTheme();
+  const { colors, borderRadius, insets } = useTheme();
   const { selectedEvent, isLoading, loadEvent, deleteEvent, clearSelectedEvent } = useEventStore();
 
   useEffect(() => {
     loadEvent(eventId);
     return () => clearSelectedEvent();
-  }, [eventId]);
+  }, [eventId, loadEvent, clearSelectedEvent]);
 
   const handleDelete = () => {
     Alert.alert('Delete Event', 'Are you sure you want to delete this event?', [
@@ -67,7 +67,7 @@ export function EventDetailScreen({ navigation, route }: Props) {
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={[styles.backButton, { color: colors.primary }]}>← Back</Text>
         </TouchableOpacity>
@@ -150,7 +150,6 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 16,
-    paddingTop: 60,
     paddingBottom: 8,
   },
   backButton: {

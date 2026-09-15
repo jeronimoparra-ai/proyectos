@@ -2,16 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { eventService } from './event.service';
 import type { CreateEventInput, UpdateEventInput, EventQueryInput } from './event.schema';
 import type { AuthenticatedRequest } from '../../middleware/auth.middleware';
-
-function getStringParam(value: unknown): string {
-  if (typeof value === 'string') return value;
-  if (Array.isArray(value) && typeof value[0] === 'string') return value[0];
-  return '';
-}
-
-function parseQuery<T extends Record<string, unknown>>(query: Record<string, unknown>): T {
-  return query as T;
-}
+import { getStringParam, parseQuery } from '../../utils/helpers';
 
 export class EventController {
   async list(req: Request, res: Response, next: NextFunction) {

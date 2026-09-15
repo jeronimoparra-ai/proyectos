@@ -2,12 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { reminderService } from './reminder.service';
 import type { CreateReminderInput, UpdateReminderInput } from './reminder.schema';
 import type { AuthenticatedRequest } from '../../middleware/auth.middleware';
-
-function getStringParam(value: unknown): string {
-  if (typeof value === 'string') return value;
-  if (Array.isArray(value) && typeof value[0] === 'string') return value[0];
-  return '';
-}
+import { getStringParam } from '../../utils/helpers';
 
 export class ReminderController {
   async listByTask(req: Request, res: Response, next: NextFunction) {

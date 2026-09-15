@@ -10,6 +10,7 @@ import {
 import { useTheme } from '../hooks';
 import { useEventStore } from '../store/useEventStore';
 import { CalendarGrid } from '../components/calendar/CalendarGrid';
+import { WeekView } from '../components/calendar/WeekView';
 import { EventCard } from '../components/calendar/EventCard';
 import type { Event } from '../types';
 import type { TabScreenProps } from '../navigation/types';
@@ -17,7 +18,7 @@ import type { TabScreenProps } from '../navigation/types';
 const VIEW_MODES = ['Month', 'Week'] as const;
 
 export function CalendarScreen({ navigation }: TabScreenProps<'Calendar'>) {
-  const { colors, borderRadius } = useTheme();
+  const { colors, borderRadius, insets } = useTheme();
   const {
     events,
     isLoading,
@@ -29,7 +30,7 @@ export function CalendarScreen({ navigation }: TabScreenProps<'Calendar'>) {
 
   useEffect(() => {
     loadEvents();
-  }, [selectedDate]);
+  }, [selectedDate, loadEvents]);
 
   const handlePrevMonth = () => {
     const newDate = new Date(selectedDate);
@@ -40,6 +41,18 @@ export function CalendarScreen({ navigation }: TabScreenProps<'Calendar'>) {
   const handleNextMonth = () => {
     const newDate = new Date(selectedDate);
     newDate.setMonth(newDate.getMonth() + 1);
+    setSelectedDate(newDate);
+  };
+
+  const handlePrevWeek = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() - 7);
+    setSelectedDate(newDate);
+  };
+
+  const handleNextWeek = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() + 7);
     setSelectedDate(newDate);
   };
 
@@ -64,9 +77,12 @@ export function CalendarScreen({ navigation }: TabScreenProps<'Calendar'>) {
     );
   });
 
+  const navigatePrev = viewMode === 'Month' ? handlePrevMonth : handlePrevWeek;
+  const navigateNext = viewMode === 'Month' ? handleNextMonth : handleNextWeek;
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <Text style={[styles.title, { color: colors.text }]}>Calendar</Text>
         <TouchableOpacity
           style={[styles.addButton, { backgroundColor: colors.primary, borderRadius: borderRadius.md }]}
@@ -102,46 +118,55 @@ export function CalendarScreen({ navigation }: TabScreenProps<'Calendar'>) {
       </View>
 
       <View style={styles.monthNav}>
-        <TouchableOpacity onPress={handlePrevMonth}>
-          <Text style={[styles.navArrow, { color: colors.primary }]}>←</Text>
+        <TouchableOpacity onPress={navigatePrev}>
+          <Text style={[styles.navArrow, { color: colors.primary }]}>{'←'}</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={handleNextMonth}>
-          <Text style={[styles.navArrow, { color: colors.primary }]}>→</Text>
+        <TouchableOpacity onPress={navigateNext}>
+          <Text style={[styles.navArrow, { color: colors.primary }]}>{'→'}</Text>
         </TouchableOpacity>
       </View>
 
-      {viewMode === 'Month' && (
+      {viewMode === 'Month' ? (
         <CalendarGrid
           selectedDate={selectedDate}
           currentDate={selectedDate}
           events={events}
           onDatePress={handleDatePress}
         />
+      ) : (
+        <WeekView
+          selectedDate={selectedDate}
+          events={events}
+          onDatePress={handleDatePress}
+          onEventPress={handleEventPress}
+        />
       )}
 
-      <View style={styles.eventsSection}>
-        <Text style={[styles.eventsTitle, { color: colors.text }]}>
-          Events for {selectedDate.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}
-        </Text>
+      {viewMode === 'Month' && (
+        <View style={styles.eventsSection}>
+          <Text style={[styles.eventsTitle, { color: colors.text }]}>
+            Events for {selectedDate.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}
+          </Text>
 
-        {isLoading ? (
-          <ActivityIndicator size="small" color={colors.primary} style={styles.loader} />
-        ) : (
-          <FlatList
-            data={todayEvents}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <EventCard event={item} onPress={handleEventPress} />
-            )}
-            ListEmptyComponent={
-              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                No events for this day
-              </Text>
-            }
-            contentContainerStyle={styles.eventsList}
-          />
-        )}
-      </View>
+          {isLoading ? (
+            <ActivityIndicator size="small" color={colors.primary} style={styles.loader} />
+          ) : (
+            <FlatList
+              data={todayEvents}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <EventCard event={item} onPress={handleEventPress} />
+              )}
+              ListEmptyComponent={
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                  No events for this day
+                </Text>
+              }
+              contentContainerStyle={styles.eventsList}
+            />
+          )}
+        </View>
+      )}
     </View>
   );
 }
@@ -155,7 +180,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 60,
     paddingBottom: 12,
   },
   title: {

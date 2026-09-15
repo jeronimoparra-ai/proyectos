@@ -12,24 +12,45 @@ import {
 } from 'react-native';
 import { useTheme } from '../hooks';
 import { useEventStore } from '../store/useEventStore';
+import { DateInput } from '../components/DateInput';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'EventForm'>;
 
+function toISOString(date: Date, time: Date | null, allDay: boolean): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  if (allDay) return `${y}-${m}-${d}T00:00:00.000Z`;
+  const h = String(time?.getHours() ?? 0).padStart(2, '0');
+  const min = String(time?.getMinutes() ?? 0).padStart(2, '0');
+  return `${y}-${m}-${d}T${h}:${min}:00.000Z`;
+}
+
+function toEndISOString(date: Date, time: Date | null, allDay: boolean): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  if (allDay) return `${y}-${m}-${d}T23:59:59.000Z`;
+  const h = String(time?.getHours() ?? 23).padStart(2, '0');
+  const min = String(time?.getMinutes() ?? 59).padStart(2, '0');
+  return `${y}-${m}-${d}T${h}:${min}:00.000Z`;
+}
+
 export function EventFormScreen({ navigation, route }: Props) {
   const { eventId } = route.params ?? {};
-  const { colors, borderRadius } = useTheme();
+  const { colors, borderRadius, insets } = useTheme();
   const { selectedEvent, loadEvent, createEvent, updateEvent, clearSelectedEvent } = useEventStore();
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [startTime, setStartTime] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [endTime, setEndTime] = useState('');
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [startTime, setStartTime] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [endTime, setEndTime] = useState<Date | null>(null);
   const [allDay, setAllDay] = useState(false);
   const [location, setLocation] = useState('');
 
@@ -39,7 +60,7 @@ export function EventFormScreen({ navigation, route }: Props) {
       loadEvent(eventId).finally(() => setIsLoading(false));
     }
     return () => clearSelectedEvent();
-  }, [eventId]);
+  }, [eventId, loadEvent, clearSelectedEvent]);
 
   useEffect(() => {
     if (selectedEvent && eventId) {
@@ -51,10 +72,10 @@ export function EventFormScreen({ navigation, route }: Props) {
       const start = new Date(selectedEvent.start_date);
       const end = new Date(selectedEvent.end_date);
 
-      setStartDate(start.toISOString().split('T')[0]);
-      setStartTime(start.toTimeString().slice(0, 5));
-      setEndDate(end.toISOString().split('T')[0]);
-      setEndTime(end.toTimeString().slice(0, 5));
+      setStartDate(start);
+      setStartTime(allDay ? null : start);
+      setEndDate(end);
+      setEndTime(allDay ? null : end);
     }
   }, [selectedEvent, eventId]);
 
@@ -68,21 +89,17 @@ export function EventFormScreen({ navigation, route }: Props) {
       return;
     }
 
-    const startDateTime = allDay
-      ? `${startDate}T00:00:00.000Z`
-      : `${startDate}T${startTime || '00:00'}:00.000Z`;
-    const endDateTime = allDay
-      ? `${endDate || startDate}T23:59:59.000Z`
-      : `${endDate || startDate}T${endTime || '23:59'}:00.000Z`;
-
     setIsSaving(true);
     try {
+      const startISO = toISOString(startDate, startTime, allDay);
+      const endISO = toISOString(endDate ?? startDate, endTime, allDay);
+
       if (eventId) {
         await updateEvent(eventId, {
           title: title.trim(),
           description: description.trim() || undefined,
-          start_date: startDateTime,
-          end_date: endDateTime,
+          start_date: startISO,
+          end_date: allDay ? toEndISOString(endDate ?? startDate, null, true) : endISO,
           all_day: allDay,
           location: location.trim() || undefined,
         });
@@ -90,8 +107,8 @@ export function EventFormScreen({ navigation, route }: Props) {
         await createEvent({
           title: title.trim(),
           description: description.trim() || undefined,
-          start_date: startDateTime,
-          end_date: endDateTime,
+          start_date: startISO,
+          end_date: allDay ? toEndISOString(endDate ?? startDate, null, true) : endISO,
           all_day: allDay,
           location: location.trim() || undefined,
         });
@@ -114,7 +131,7 @@ export function EventFormScreen({ navigation, route }: Props) {
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={[styles.backButton, { color: colors.primary }]}>← Back</Text>
         </TouchableOpacity>
@@ -170,74 +187,47 @@ export function EventFormScreen({ navigation, route }: Props) {
         </View>
 
         <View style={styles.row}>
-          <View style={[styles.field, { flex: 1 }]}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Start Date *</Text>
-            <TextInput
-              style={[styles.input, {
-                backgroundColor: colors.surfaceVariant,
-                color: colors.text,
-                borderColor: colors.border,
-                borderRadius: borderRadius.md,
-              }]}
+          <View style={{ flex: 1 }}>
+            <DateInput
+              label="Start Date *"
               value={startDate}
-              onChangeText={setStartDate}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={colors.textTertiary}
-              keyboardType="numbers-and-punctuation"
+              onChange={setStartDate}
+              mode="date"
+              placeholder="Select date"
             />
           </View>
           {!allDay && (
-            <View style={[styles.field, { flex: 1 }]}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Start Time</Text>
-              <TextInput
-                style={[styles.input, {
-                  backgroundColor: colors.surfaceVariant,
-                  color: colors.text,
-                  borderColor: colors.border,
-                  borderRadius: borderRadius.md,
-                }]}
+            <View style={{ flex: 1 }}>
+              <DateInput
+                label="Start Time"
                 value={startTime}
-                onChangeText={setStartTime}
-                placeholder="HH:MM"
-                placeholderTextColor={colors.textTertiary}
-                keyboardType="numbers-and-punctuation"
+                onChange={setStartTime}
+                mode="time"
+                placeholder="Select time"
               />
             </View>
           )}
         </View>
 
         <View style={styles.row}>
-          <View style={[styles.field, { flex: 1 }]}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>End Date</Text>
-            <TextInput
-              style={[styles.input, {
-                backgroundColor: colors.surfaceVariant,
-                color: colors.text,
-                borderColor: colors.border,
-                borderRadius: borderRadius.md,
-              }]}
+          <View style={{ flex: 1 }}>
+            <DateInput
+              label="End Date"
               value={endDate}
-              onChangeText={setEndDate}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={colors.textTertiary}
-              keyboardType="numbers-and-punctuation"
+              onChange={setEndDate}
+              mode="date"
+              placeholder="Select date"
+              minimumDate={startDate ?? undefined}
             />
           </View>
           {!allDay && (
-            <View style={[styles.field, { flex: 1 }]}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>End Time</Text>
-              <TextInput
-                style={[styles.input, {
-                  backgroundColor: colors.surfaceVariant,
-                  color: colors.text,
-                  borderColor: colors.border,
-                  borderRadius: borderRadius.md,
-                }]}
+            <View style={{ flex: 1 }}>
+              <DateInput
+                label="End Time"
                 value={endTime}
-                onChangeText={setEndTime}
-                placeholder="HH:MM"
-                placeholderTextColor={colors.textTertiary}
-                keyboardType="numbers-and-punctuation"
+                onChange={setEndTime}
+                mode="time"
+                placeholder="Select time"
               />
             </View>
           )}
@@ -286,7 +276,6 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 16,
-    paddingTop: 60,
     paddingBottom: 16,
   },
   backButton: {

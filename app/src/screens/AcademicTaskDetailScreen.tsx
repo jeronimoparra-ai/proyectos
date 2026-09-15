@@ -19,7 +19,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'AcademicTaskDetail'>;
 
 export function AcademicTaskDetailScreen({ navigation, route }: Props) {
   const { taskId } = route.params;
-  const { colors, borderRadius } = useTheme();
+  const { colors, borderRadius, insets } = useTheme();
   const {
     selectedTask,
     isLoading,
@@ -38,7 +38,7 @@ export function AcademicTaskDetailScreen({ navigation, route }: Props) {
   useEffect(() => {
     loadTask(taskId);
     return () => clearSelectedTask();
-  }, [taskId]);
+  }, [taskId, loadTask, clearSelectedTask]);
 
   const handleProcess = async () => {
     Alert.alert(
@@ -88,7 +88,7 @@ export function AcademicTaskDetailScreen({ navigation, route }: Props) {
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={[styles.backButton, { color: colors.primary }]}>← Back</Text>
         </TouchableOpacity>
@@ -252,7 +252,6 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 16,
-    paddingTop: 60,
     paddingBottom: 8,
   },
   backButton: {

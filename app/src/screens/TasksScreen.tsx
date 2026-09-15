@@ -30,13 +30,13 @@ const PRIORITY_FILTERS: { label: string; value: TaskPriority | undefined }[] = [
 ];
 
 export function TasksScreen({ navigation }: TabScreenProps<'Tasks'>) {
-  const { colors, spacing, borderRadius } = useTheme();
+  const { colors, spacing, borderRadius, insets } = useTheme();
   const { tasks, isLoading, filters, setFilters, loadTasks, completeTask } = useTaskStore();
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     loadTasks();
-  }, []);
+  }, [loadTasks]);
 
   const handleSearch = (text: string) => {
     setSearchQuery(text);
@@ -67,7 +67,7 @@ export function TasksScreen({ navigation }: TabScreenProps<'Tasks'>) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <Text style={[styles.title, { color: colors.text }]}>Tasks</Text>
         <TouchableOpacity
           style={[styles.addButton, { backgroundColor: colors.primary, borderRadius: borderRadius.md }]}
@@ -148,7 +148,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 60,
     paddingBottom: 16,
   },
   title: {
