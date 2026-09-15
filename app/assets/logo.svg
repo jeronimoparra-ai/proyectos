@@ -1,0 +1,17 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="96" fill="#6366f1"/>
+  
+  <!-- Inner circle -->
+  <circle cx="100" cy="100" r="72" fill="#818cf8" opacity="0.3"/>
+  
+  <!-- Checkmark -->
+  <path d="M65 100L90 125L140 75" stroke="white" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Sparkle -->
+  <path d="M155 45L160 55L170 60L160 65L155 75L150 65L140 60L150 55Z" fill="#fbbf24"/>
+  
+  <!-- Book/Brain symbol -->
+  <path d="M45 130C45 130 60 120 80 125C100 130 120 130 120 130" stroke="white" stroke-width="4" stroke-linecap="round"/>
+  <path d="M45 145C45 145 60 135 80 140C100 145 120 145 120 145" stroke="white" stroke-width="4" stroke-linecap="round"/>
+</svg>

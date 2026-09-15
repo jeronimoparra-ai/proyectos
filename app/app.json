@@ -6,6 +6,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
+    "scheme": "productivityapp",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true
@@ -26,6 +27,7 @@
     },
     "plugins": [
       "expo-secure-store",
+      "expo-notifications",
       "@react-native-community/datetimepicker"
     ],
     "extra": {

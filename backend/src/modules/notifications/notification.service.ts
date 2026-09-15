@@ -133,12 +133,12 @@ export class NotificationService {
         return false;
       }
 
-      const result = await response.json() as { data?: Array<{ status: string; message?: string }> };
+      const result = await response.json() as { data?: Array<{ status: string; message?: string; id?: string }> };
       if (result.data) {
-        for (const item of result.data) {
+        for (let i = 0; i < result.data.length; i++) {
+          const item = result.data[i];
           if (item.status === 'error' && item.message === 'DeviceNotRegistered') {
-            const idx = result.data.indexOf(item);
-            const failedToken = tokens[idx];
+            const failedToken = item.id ?? tokens[i];
             if (failedToken) {
               await supabase.from('push_tokens').delete().eq('token', failedToken);
             }

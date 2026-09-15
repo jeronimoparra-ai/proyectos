@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '../../middleware/auth.middleware';
 import { notificationService } from './notification.service';
 import { registerPushTokenSchema } from './notification.schema';
+import { getStringParam } from '../../utils/helpers';
 
 export class NotificationController {
   async registerPushToken(req: AuthenticatedRequest, res: Response, next: NextFunction) {
@@ -44,7 +45,7 @@ export class NotificationController {
   async markAsRead(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const userId = req.userId!;
-      const id = req.params.id as string;
+      const id = getStringParam(req.params.id);
       await notificationService.markAsRead(userId, id);
       res.json({ message: 'Notification marked as read' });
     } catch (error) {

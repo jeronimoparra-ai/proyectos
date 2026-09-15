@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { reviewController } from './review.controller';
 import { feedbackController } from './feedback.controller';
 import { authMiddleware } from '../../middleware/auth.middleware';
+import { validate } from '../../middleware/validate.middleware';
+import { createReviewSchema } from './review.schema';
 
 const router = Router();
 
@@ -12,7 +14,7 @@ router.get('/stats', (req, res, next) => reviewController.getReviewStats(req, re
 router.get('/feedback', (req, res, next) => feedbackController.getWeeklyFeedback(req, res, next));
 router.get('/recommendations', (req, res, next) => feedbackController.getRecommendations(req, res, next));
 router.get('/history/:taskId', (req, res, next) => reviewController.getReviewHistory(req, res, next));
-router.post('/', (req, res, next) => reviewController.recordReview(req, res, next));
+router.post('/', validate(createReviewSchema), (req, res, next) => reviewController.recordReview(req, res, next));
 router.post('/initialize/:taskId', (req, res, next) => reviewController.initializeForTask(req, res, next));
 
 export { router as reviewRoutes };

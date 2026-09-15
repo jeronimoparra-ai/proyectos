@@ -1,141 +1,243 @@
+<div align="center">
+
+<img src="app/assets/logo.svg" width="120" height="120" alt="Productivity App Logo">
+
 # Productivity App
 
-Aplicación móvil de productividad académica con gestión de tareas, calendario, repetición espaciada (SM-2) y una capa de IA desacoplada para resúmenes, preguntas de repaso y recomendaciones de estudio.
+### Tu asistente inteligente de productividad académica
 
-## Stack técnico
+[![React Native](https://img.shields.io/badge/React%20Native-0.86.3-61DAFB?style=flat-square&logo=react)](https://reactnative.dev)
+[![Expo](https://img.shields.io/badge/Expo-SDK%2057-000020?style=flat-square&logo=expo)](https://expo.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?style=flat-square&logo=typescript)](https://www.typescriptlang.org)
+[![Node.js](https://img.shields.io/badge/Node.js-20-339933?style=flat-square&logo=node.js)](https://nodejs.org)
+[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3FCF8E?style=flat-square&logo=supabase)](https://supabase.com)
 
-- **Frontend:** React Native / Expo SDK 57
-- **Backend:** Node.js / Express 5 + TypeScript
-- **Base de datos:** Supabase (PostgreSQL + Row Level Security)
-- **IA:** OpenRouter (capa desacoplada, modelo Gemini Flash)
-- **Búsqueda web:** Brave Search API
-- **Calendario:** Google Calendar API (OAuth2)
-- **Estado:** Zustand
-- **Navegación:** React Navigation 7
+---
 
-## Descargar APK
+**Gestiona tareas, calendario, estudia con repetición espaciada y potencia tu aprendizaje con IA.**
 
-| Build | Estado | Link |
-|-------|--------|------|
-| Preview v1.0.0 (1) | `FINISHED` | [Descargar APK](https://expo.dev/artifacts/eas/sUtc46ValeSq_GhpK65zQRW3Qu_LHgkfR9bbDGbEsno.apk) |
+</div>
 
-> **Nota:** Este es un build de prueba (perfil `preview`). No está optimizado para producción ni publicado en Google Play. El link expira el 29/09/2026.
+---
 
-Para ver el historial completo de builds: [EAS Builds](https://expo.dev/accounts/jerodev/projects/productivity-app/builds)
+## Descargar la App
 
-## Ejecutar en desarrollo
+### Opción 1: Descarga directa (Recomendado)
+
+Haz clic en el botón para descargar la última versión:
+
+| Plataforma | Enlace de descarga |
+|------------|-------------------|
+| **Android** | **[Descargar APK](https://expo.dev/artifacts/eas/sUtc46ValeSq_GhpK65zQRW3Qu_LHgkfR9bbDGbEsno.apk)** |
+
+> **Instrucciones:**
+> 1. Haz clic en "Descargar APK"
+> 2. Abre el archivo descargado
+> 3. Si es necesario, permite instalación de fuentes desconocidas
+> 4. Instala y abre la app
+
+### Opción 2: Build yourself
+
+```bash
+# Instalar EAS CLI
+npm install -g eas-cli
+
+# Login
+eas login
+
+# Build APK
+eas build --profile preview --platform android
+```
+
+---
+
+## Características principales
+
+| Feature | Descripción |
+|---------|-------------|
+| **Tareas** | CRUD completo con prioridades, fechas, recordatorios y subtareas |
+| **Calendario** | Vista mensual y semanal con eventos |
+| **Estudio** | Repetición espaciada SM-2 para optimizar tu aprendizaje |
+| **IA** | Resúmenes, preguntas de repaso y recomendaciones personalizadas |
+| **Búsqueda** | Research de topics con Brave Search |
+| **Notificaciones** | Push notifications para recordatorios en tiempo real |
+| **Temas** | Modo claro, oscuro y automático |
+
+---
+
+## Capturas de pantalla
+
+<div align="center">
+
+| Login | Tareas | Calendario | Estudio |
+|:-----:|:------:|:----------:|:-------:|
+| ![Login](https://via.placeholder.com/200x400/1a1a2e/ffffff?text=Login) | ![Tasks](https://via.placeholder.com/200x400/16213e/ffffff?text=Tareas) | ![Calendar](https://via.placeholder.com/200x400/0f3460/ffffff?text=Calendario) | ![Study](https://via.placeholder.com/200x400/533483/ffffff?text=Estudio) |
+
+</div>
+
+---
+
+## Stack tecnológico
+
+```
+Frontend          Backend           Services
+─────────         ────────          ────────
+React Native      Node.js           Supabase (DB + Auth)
+Expo SDK 57       Express 5         OpenRouter (IA)
+Zustand           TypeScript        Brave Search
+React Navigation  Zod Validation    Google Calendar
+```
+
+---
+
+## Arquitectura
+
+```
+productivity-app/
+├── app/                    # React Native (Expo)
+│   ├── src/
+│   │   ├── components/     # Componentes reutilizables
+│   │   ├── screens/        # Pantallas de la app
+│   │   ├── services/       # API clients
+│   │   ├── store/          # Zustand stores
+│   │   ├── hooks/          # Custom hooks
+│   │   └── navigation/     # Navegación
+│   └── app.json
+│
+├── backend/                # Node.js API
+│   ├── src/
+│   │   ├── modules/        # Feature modules
+│   │   │   ├── auth/       # Autenticación
+│   │   │   ├── tasks/      # Gestión de tareas
+│   │   │   ├── events/     # Calendario
+│   │   │   ├── academic/   # Tareas académicas
+│   │   │   ├── ai/         # Integración IA
+│   │   │   ├── reviews/    # Spaced repetition
+│   │   │   ├── reminders/  # Recordatorios
+│   │   │   └── notifications/ # Push notifications
+│   │   ├── middleware/      # Auth, validation, errors
+│   │   └── utils/          # Helpers, SM-2 algorithm
+│   └── src/database/migrations/
+│
+└── .github/workflows/      # CI/CD
+```
+
+---
+
+## Quick Start para desarrolladores
 
 ### Prerrequisitos
 
 - Node.js >= 18
 - npm o yarn
 - Expo CLI (`npm install -g expo-cli`)
-- Cuenta de Expo (gratis en [expo.dev](https://expo.dev))
-- Supabase project (gratis en [supabase.com](https://supabase.com))
+- Cuenta de Supabase (gratis)
+- Cuenta de Expo (gratis)
 
-### 1. Clonar el repositorio
+### 1. Clonar y configurar
 
 ```bash
 git clone <url-del-repositorio>
 cd proyectos
-```
 
-### 2. Instalar dependencias
-
-```bash
 # Backend
-cd backend
-npm install
+cd backend && npm install
+cp .env.example .env
 
 # App
-cd ../app
-npm install
-```
-
-### 3. Variables de entorno
-
-Crea un archivo `.env` en la raíz del proyecto basado en `.env.example`:
-
-```bash
+cd ../app && npm install
 cp .env.example .env
 ```
 
-Y otro en `backend/`:
+### 2. Configurar variables de entorno
 
-```bash
-cp backend/.env.example backend/.env
+**Backend (`backend/.env`):**
+
+```env
+SUPABASE_URL=https://tu-proyecto.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=tu-service-role-key
+OPENROUTER_API_KEY=tu-api-key
+BRAVE_SEARCH_API_KEY=tu-api-key
+EXPO_ACCESS_TOKEN=tu-token-expo  # Opcional pero recomendado
 ```
 
-**Variables necesarias:**
+**App (`app/.env`):**
 
-| Variable | Descripción | Dónde obtenerla |
-|----------|-------------|-----------------|
-| `EXPO_PUBLIC_SUPABASE_URL` | URL de tu proyecto Supabase | Supabase Dashboard > Settings > API |
-| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Anon key de Supabase | Supabase Dashboard > Settings > API |
-| `EXPO_PUBLIC_API_URL` | URL del backend (default: `http://localhost:3000`) | Local |
-| `SUPABASE_URL` | URL de Supabase (backend) | Supabase Dashboard |
-| `SUPABASE_SERVICE_ROLE_KEY` | Service role key (backend) | Supabase Dashboard > Settings > API |
-| `OPENROUTER_API_KEY` | API key de OpenRouter | [openrouter.ai](https://openrouter.ai) |
-| `BRAVE_SEARCH_API_KEY` | API key de Brave Search | [brave.com/search/api](https://brave.com/search/api) |
+```env
+EXPO_PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=tu-anon-key
+EXPO_PUBLIC_API_URL=http://localhost:3000
+```
+
+### 3. Configurar base de datos
+
+Ejecuta el SQL de `backend/src/database/migrations/` en tu Supabase Dashboard > SQL Editor.
 
 ### 4. Ejecutar
 
 ```bash
-# Terminal 1 — Backend
-cd backend
-npm run dev
+# Terminal 1 - Backend
+cd backend && npm run dev
 
-# Terminal 2 — App
-cd app
-npx expo start
+# Terminal 2 - App
+cd app && npx expo start
 ```
 
-### 5. Migraciones de base de datos
+---
 
-Ejecuta el SQL de `backend/src/database/migrations/001_initial_schema.sql` en tu proyecto Supabase (Dashboard > SQL Editor).
+## API Endpoints
 
-## Estado del proyecto
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| POST | `/api/auth/register` | Registrar usuario |
+| POST | `/api/auth/login` | Iniciar sesión |
+| GET | `/api/tasks` | Listar tareas |
+| POST | `/api/tasks` | Crear tarea |
+| GET | `/api/events` | Listar eventos |
+| POST | `/api/events` | Crear evento |
+| POST | `/api/reviews` | Registrar review SM-2 |
+| GET | `/api/reviews/due` | Obtener reviews pendientes |
+| POST | `/api/ai/process` | Procesar con IA |
+| POST | `/api/notifications/push-token` | Registrar push token |
 
-### Fase 1 — Setup, Auth, DB ✅
-- Autenticación completa (registro, login, logout, recuperación de contraseña)
-- Schema de base de datos con 15 tablas y RLS
-- Configuración de proyecto y variables de entorno
+---
 
-### Fase 2 — Tareas y Calendario ✅
-- CRUD de tareas con filtros, búsqueda y paginación
-- Subtareas, categorías, etiquetas
-- Calendario con vista mensual y semanal
-- CRUD de eventos con fuente local/Google
-- Sistema de recordatorios
+## Testing
 
-### Fase 3 — Módulo Académico + IA ✅
-- Tareas académicas con materiales de estudio
-- Procesamiento con IA (resumen, ideas clave, conceptos, preguntas)
-- Integración con OpenRouter (Gemini Flash)
-- Búsqueda web y research de topics (Brave Search)
+```bash
+# Backend - Todos los tests
+cd backend && npm test
 
-### Fase 4 — Repetición Espaciada ✅
-- Algoritmo SM-2 implementado
-- Interfaz de review con escala de calidad 0-5
-- Historial de reviews por tarea
-- Feedback semanal con recomendaciones de IA
-- Estadísticas de progreso
+# Backend - Watch mode
+cd backend && npm run test:watch
 
-### Fase 5 — Settings y UI ⚠️
-- Pantalla de Settings con selección de tema (light/dark/system)
-- Edición de perfil
-- SafeArea manejado dinámicamente en todas las pantallas
-- Íconos en tabs de navegación
-- Date pickers nativos en formularios de tareas y eventos
+# Typecheck
+cd backend && npm run typecheck
+cd app && npm run typecheck
+```
 
-### Fase 6 — Testing y CI/CD ⚠️
-- Vitest configurado con tests unitarios (helpers, SM-2)
-- GitHub Actions CI (typecheck + tests en backend y app)
-- Rate limiting en endpoints (100 req/15min general, 20 req/15min auth)
-- Request logging con morgan
+---
 
-### Pendiente
-- Notificaciones push (tabla creada, lógica no implementada)
-- Integración completa con Google Calendar (OAuth2 configurado)
-- Tests de integración y E2E
-- Publicación en Google Play Store
+## Contribuir
+
+1. Fork el proyecto
+2. Crea una branch (`git checkout -b feature/nueva-feature`)
+3. Haz commit (`git commit -m 'Add nueva feature'`)
+4. Push a la branch (`git push origin feature/nueva-feature`)
+5. Abre un Pull Request
+
+---
+
+## Licencia
+
+ISC
+
+---
+
+<div align="center">
+
+**Desarrollado con ❤️ por [JeroDev](https://github.com/jerodev)**
+
+[![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/jerodev)
+
+</div>
