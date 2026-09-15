@@ -44,6 +44,7 @@ export interface WeeklyFeedback {
 
 class ReviewService {
   private async getToken(): Promise<string> {
+    if (!supabase) return '';
     const { data: { session } } = await supabase.auth.getSession();
     return session?.access_token ?? '';
   }

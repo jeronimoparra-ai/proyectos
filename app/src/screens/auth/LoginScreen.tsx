@@ -29,6 +29,11 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
       return;
     }
 
+    if (!supabase) {
+      Alert.alert('Error', 'Authentication service is not configured');
+      return;
+    }
+
     setIsLoading(true);
     try {
       const { error } = await supabase.auth.signInWithPassword({

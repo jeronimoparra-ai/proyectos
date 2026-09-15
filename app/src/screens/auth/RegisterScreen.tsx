@@ -42,6 +42,11 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
       return;
     }
 
+    if (!supabase) {
+      Alert.alert('Error', 'Authentication service is not configured');
+      return;
+    }
+
     setIsLoading(true);
     try {
       const { error } = await supabase.auth.signUp({

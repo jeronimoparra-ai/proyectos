@@ -3,6 +3,7 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { notificationService } from '../services/notification';
 import { useAuthStore } from '../store/useAuthStore';
+import { supabase } from '../services/supabase';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -19,37 +20,44 @@ export function usePushNotifications() {
   const user = useAuthStore((s) => s.user);
 
   const registerForPushNotifications = useCallback(async () => {
-    if (!user) return;
-
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-
-    if (finalStatus !== 'granted') {
-      console.warn('Push notification permission not granted');
-      return;
-    }
-
-    const tokenData = await Notifications.getExpoPushTokenAsync();
-    expoPushToken.current = tokenData.data;
-
-    if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'Default',
-        importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#FF6B35',
-      });
-    }
+    if (!user || !supabase) return;
 
     try {
-      await notificationService.registerPushToken(tokenData.data, Platform.OS as 'android' | 'ios');
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+
+      if (finalStatus !== 'granted') {
+        console.warn('Push notification permission not granted');
+        return;
+      }
+
+      const tokenData = await Notifications.getExpoPushTokenAsync();
+      expoPushToken.current = tokenData.data;
+
+      if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync('default', {
+          name: 'Default',
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: '#FF6B35',
+        });
+      }
+
+      try {
+        await notificationService.registerPushToken(
+          tokenData.data,
+          Platform.OS as 'android' | 'ios'
+        );
+      } catch (err) {
+        console.error('Failed to register push token with backend:', err);
+      }
     } catch (err) {
-      console.error('Failed to register push token:', err);
+      console.error('[usePushNotifications] Error during registration:', err);
     }
   }, [user]);
 
@@ -62,10 +70,12 @@ export function usePushNotifications() {
       console.log('Notification received:', notification.request.content);
     });
 
-    const responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
-      const data = response.notification.request.content.data;
-      console.log('Notification tapped:', data);
-    });
+    const responseSubscription = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        const data = response.notification.request.content.data;
+        console.log('Notification tapped:', data);
+      }
+    );
 
     return () => {
       subscription.remove();

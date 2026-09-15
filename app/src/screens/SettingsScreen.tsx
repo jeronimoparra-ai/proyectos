@@ -40,6 +40,10 @@ export function SettingsScreen() {
       Alert.alert('Error', 'Name cannot be empty');
       return;
     }
+    if (!supabase) {
+      Alert.alert('Error', 'Authentication service is not configured');
+      return;
+    }
     setIsSaving(true);
     try {
       const { error } = await supabase.auth.updateUser({
@@ -62,7 +66,9 @@ export function SettingsScreen() {
         text: 'Sign Out',
         style: 'destructive',
         onPress: async () => {
-          await supabase.auth.signOut();
+          if (supabase) {
+            await supabase.auth.signOut();
+          }
           signOut();
         },
       },
