@@ -54,10 +54,10 @@ export function usePushNotifications() {
           Platform.OS as 'android' | 'ios'
         );
       } catch (err) {
-        console.error('Failed to register push token with backend:', err);
+        console.warn('[usePushNotifications] Failed to register push token with backend:', err);
       }
     } catch (err) {
-      console.error('[usePushNotifications] Error during registration:', err);
+      console.warn('[usePushNotifications] Error during push notification setup:', err);
     }
   }, [user]);
 

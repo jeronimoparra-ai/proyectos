@@ -1,7 +1,17 @@
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 
+const DEFAULT_TIMEOUT_MS = 15000;
+
+export class ApiTimeoutError extends Error {
+  constructor(message = 'Sin conexión: el servidor tardó demasiado en responder') {
+    super(message);
+    this.name = 'TimeoutError';
+  }
+}
+
 interface RequestOptions extends RequestInit {
   token?: string;
+  timeoutMs?: number;
 }
 
 class ApiClient {
@@ -12,7 +22,7 @@ class ApiClient {
   }
 
   private async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
-    const { token, ...fetchOptions } = options;
+    const { token, timeoutMs = DEFAULT_TIMEOUT_MS, ...fetchOptions } = options;
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -23,10 +33,25 @@ class ApiClient {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${this.baseUrl}${endpoint}`, {
-      ...fetchOptions,
-      headers,
-    });
+    const signal = options.signal ?? (
+      typeof AbortSignal.timeout === 'function'
+        ? AbortSignal.timeout(timeoutMs)
+        : undefined
+    );
+
+    let response: Response;
+    try {
+      response = await fetch(`${this.baseUrl}${endpoint}`, {
+        ...fetchOptions,
+        headers,
+        signal,
+      });
+    } catch (err: unknown) {
+      if (err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError')) {
+        throw new ApiTimeoutError();
+      }
+      throw err;
+    }
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: 'Request failed' }));

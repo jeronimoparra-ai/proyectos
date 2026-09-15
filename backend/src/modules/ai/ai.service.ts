@@ -34,21 +34,30 @@ Be concise but thorough. Focus on the most important academic concepts.`;
 
 export class AIService {
   private async callOpenRouter(messages: OpenRouterMessage[]): Promise<string> {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${env.openrouterApiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': env.frontendUrl ?? 'http://localhost:8081',
-        'X-Title': 'Productivity App',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.0-flash-001',
-        messages,
-        temperature: 0.3,
-        max_tokens: 2000,
-      }),
-    });
+    let response: Response;
+    try {
+      response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${env.openrouterApiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': env.frontendUrl ?? 'http://localhost:8081',
+          'X-Title': 'Productivity App',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.0-flash-001',
+          messages,
+          temperature: 0.3,
+          max_tokens: 2000,
+        }),
+        signal: AbortSignal.timeout(30000),
+      });
+    } catch (err: unknown) {
+      if (err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError')) {
+        throw createAppError('AI service timeout: the request took too long to complete', 504, 'AI_SERVICE_TIMEOUT');
+      }
+      throw err;
+    }
 
     if (!response.ok) {
       const error = await response.text();

@@ -32,7 +32,12 @@ export function SettingsScreen() {
   const [unreadCount, setUnreadCount] = useState<number | null>(null);
 
   useEffect(() => {
-    notificationService.getUnreadCount().then(setUnreadCount).catch(() => {});
+    notificationService
+      .getUnreadCount()
+      .then(setUnreadCount)
+      .catch((err) => {
+        console.warn('[SettingsScreen] Failed to load unread count:', err);
+      });
   }, []);
 
   const handleSaveName = async () => {

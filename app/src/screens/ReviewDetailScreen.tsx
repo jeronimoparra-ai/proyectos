@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useTheme } from '../hooks';
 import { useReviewStore } from '../store/useReviewStore';
@@ -64,6 +65,7 @@ export function ReviewDetailScreen({ navigation, route }: Props) {
       }
     } catch (error) {
       console.error('Error submitting review:', error);
+      Alert.alert('Error', 'Failed to submit review. Please try again.');
     }
   };
 

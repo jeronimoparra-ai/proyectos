@@ -65,16 +65,25 @@ export class GoogleCalendarService {
   }
 
   private async refreshAccessToken(userId: string, refreshToken: string): Promise<string> {
-    const response = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: env.googleClientId,
-        client_secret: env.googleClientSecret,
-        refresh_token: refreshToken,
-        grant_type: 'refresh_token',
-      }),
-    });
+    let response: Response;
+    try {
+      response = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: env.googleClientId,
+          client_secret: env.googleClientSecret,
+          refresh_token: refreshToken,
+          grant_type: 'refresh_token',
+        }),
+        signal: AbortSignal.timeout(10000),
+      });
+    } catch (err: unknown) {
+      if (err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError')) {
+        throw createAppError('Google token refresh timeout', 504, 'GOOGLE_TIMEOUT');
+      }
+      throw err;
+    }
 
     if (!response.ok) {
       throw createAppError('Failed to refresh Google token', 401, 'GOOGLE_TOKEN_REFRESH_FAILED');
@@ -94,17 +103,26 @@ export class GoogleCalendarService {
   }
 
   async handleOAuthCallback(code: string, userId: string) {
-    const response = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: env.googleClientId,
-        client_secret: env.googleClientSecret,
-        code,
-        grant_type: 'authorization_code',
-        redirect_uri: `${env.frontendUrl ?? 'http://localhost:8081'}/google-callback`,
-      }),
-    });
+    let response: Response;
+    try {
+      response = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: env.googleClientId,
+          client_secret: env.googleClientSecret,
+          code,
+          grant_type: 'authorization_code',
+          redirect_uri: `${env.frontendUrl ?? 'http://localhost:8081'}/google-callback`,
+        }),
+        signal: AbortSignal.timeout(10000),
+      });
+    } catch (err: unknown) {
+      if (err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError')) {
+        throw createAppError('Google auth code exchange timeout', 504, 'GOOGLE_TIMEOUT');
+      }
+      throw err;
+    }
 
     if (!response.ok) {
       throw createAppError('Failed to exchange Google code', 401, 'GOOGLE_AUTH_FAILED');
@@ -142,12 +160,21 @@ export class GoogleCalendarService {
 
       if (pageToken) params.append('pageToken', pageToken);
 
-      const response = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/primary/events?${params.toString()}`,
-        {
-          headers: { Authorization: `Bearer ${accessToken}` },
+      let response: Response;
+      try {
+        response = await fetch(
+          `https://www.googleapis.com/calendar/v3/calendars/primary/events?${params.toString()}`,
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            signal: AbortSignal.timeout(15000),
+          }
+        );
+      } catch (err: unknown) {
+        if (err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError')) {
+          throw createAppError('Google Calendar fetch timeout', 504, 'GOOGLE_TIMEOUT');
         }
-      );
+        throw err;
+      }
 
       if (!response.ok) {
         throw createAppError('Failed to fetch Google Calendar events', 500, 'GOOGLE_FETCH_FAILED');

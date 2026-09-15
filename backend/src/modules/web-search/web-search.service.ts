@@ -41,16 +41,25 @@ export class WebSearchService {
       count: String(count),
     });
 
-    const response = await fetch(
-      `https://api.search.brave.com/res/v1/web/search?${params.toString()}`,
-      {
-        headers: {
-          'Accept': 'application/json',
-          'Accept-Encoding': 'gzip',
-          'X-Subscription-Token': env.braveSearchApiKey,
-        },
+    let response: Response;
+    try {
+      response = await fetch(
+        `https://api.search.brave.com/res/v1/web/search?${params.toString()}`,
+        {
+          headers: {
+            'Accept': 'application/json',
+            'Accept-Encoding': 'gzip',
+            'X-Subscription-Token': env.braveSearchApiKey,
+          },
+          signal: AbortSignal.timeout(10000),
+        }
+      );
+    } catch (err: unknown) {
+      if (err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError')) {
+        throw createAppError('Search API timeout: the search service took too long to respond', 504, 'SEARCH_TIMEOUT');
       }
-    );
+      throw err;
+    }
 
     if (!response.ok) {
       const error = await response.text();
