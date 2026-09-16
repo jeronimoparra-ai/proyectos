@@ -28,12 +28,12 @@ Haz clic en el botón para descargar la última versión:
 
 | Plataforma | Enlace de descarga |
 |------------|-------------------|
-| **Android** | **[Descargar APK](https://expo.dev/artifacts/eas/7-2avpjYhCMk_rXJMd1tKkMUTGo0kxYSiF-rxhBgTKo.apk)** |
+| **Android** | **[Descargar APK](https://expo.dev/artifacts/eas/nA_nJQwpmnMsGq00ipdoFiQtlLQ1keitvIkcCXYk9FA.apk)** |
 
 > **Instrucciones:**
 > 1. Haz clic en "Descargar APK"
 > 
-> **Fecha de build:** 15/9/2026, 09:42 a. m.
+> **Fecha de build:** 15/9/2026, 12:12 p. m. (build más reciente)
 > 2. Abre el archivo descargado
 > 3. Si es necesario, permite instalación de fuentes desconocidas
 > 4. Instala y abre la app

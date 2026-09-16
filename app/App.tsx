@@ -4,7 +4,7 @@ import { RootNavigator } from './src/navigation';
 import { useTheme } from './src/hooks';
 import { usePushNotifications } from './src/hooks/usePushNotifications';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
-import { envValidation } from './src/config/env';
+import { envValidation, validateEnv } from './src/config/env';
 
 export default function App() {
   const { isDark } = useTheme();
@@ -17,10 +17,11 @@ export default function App() {
           <Text style={styles.title}>Configuración necesaria</Text>
           <Text style={styles.message}>{envValidation.missingVars.length > 0 ? 'Faltan variables de Supabase' : 'Configuración incompleta'}</Text>
           <Text style={styles.message}>{envValidation.warnings.join(' • ')}</Text>
-          <Text style={styles.message}>Regresa cuando esté configurada la cuenta de Supabase</Text>
-          <TouchableOpacity style={styles.button} onPress={() => reload()}>
-            <Text style={styles.buttonText}>Reintentar</Text>
+          <Text style={styles.message}>El build actual no tiene las variables de Supabase configuradas</Text>
+          <TouchableOpacity style={styles.button} onPress={() => validateEnv(true)}>
+            <Text style={styles.buttonText}>Reintentar validación</Text>
           </TouchableOpacity>
+          <Text style={styles.message}>Si el problema persiste, reconstruye la app con `eas build --profile preview --platform android</Text>
         </View>
       </ErrorBoundary>
     );
@@ -32,10 +33,6 @@ export default function App() {
       <StatusBar style={isDark ? 'light' : 'dark'} />
     </ErrorBoundary>
   );
-}
-
-function reload() {
-  window.location.reload();
 }
 
 const styles = StyleSheet.create({
