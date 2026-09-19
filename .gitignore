@@ -43,3 +43,4 @@ backend/dist/
 # Misc
 coverage/
 .nyc_output/
+backend/app.json
