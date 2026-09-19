@@ -219,6 +219,54 @@ cd app && npx expo start
 
 ---
 
+## Estado Actual del Proyecto
+
+**Última actualización:** 19/9/2026
+
+### ✅ Qué está funcionando
+
+- Backend compila y pasa tests (16/16 vitest tests passing)
+- Tipos correctos en app y backend (`npm run typecheck` pasa en ambos)
+- ESLint configurado (aunque hay 119 errores por resolver en el código existente)
+- Módulo StudySessions creado en el backend
+- Timeouts agregados en llamadas de red
+- Backend desplegado en Render (plan free, actualmente en reposo)
+
+### ⚠️ Problema activo sin resolver
+
+- La app compilada (APK vía EAS) se abre un instante y se cierra sola en el dispositivo real
+- Causa aún no confirmada
+
+### 🔍 Qué se descartó como causa
+
+- Variables de entorno en Render: configuradas y verificadas
+- Variables de entorno en EAS (preview): verificación no posible (EAS no configurado en este directorio); últimos intentos de configuración realizados pero build no se completó exitosamente
+- Backend desplegado y accesible: responde con 503 (free tier en reposo), accesible en https://productivity-app-backend.onrender.com
+
+### 📋 Próximo paso recomendado para retomar
+
+- Conectar el dispositivo por USB y revisar el log real con `adb logcat` (aún no hecho)
+- O revisar si ya existe un Error Boundary de React capturando el error de inicialización
+
+### 🔐 Variables de entorno necesarias (nombres únicamente)
+
+Para que quien rote el proyecto sepa qué debe configurar de nuevo al clonar el repo:
+
+**Backend (`backend/.env`):**
+- SUPABASE_URL
+- SUPABASE_SERVICE_ROLE_KEY
+- OPENROUTER_API_KEY
+- BRAVE_SEARCH_API_KEY
+- EXPO_ACCESS_TOKEN (opcional pero recomendado)
+- PORT, NODE_ENV, CORS_ORIGIN, FRONTEND_URL
+
+**App (`app/.env`):**
+- EXPO_PUBLIC_SUPABASE_URL
+- EXPO_PUBLIC_SUPABASE_ANON_KEY
+- EXPO_PUBLIC_API_URL
+
+---
+
 ## Testing
 
 ```bash
