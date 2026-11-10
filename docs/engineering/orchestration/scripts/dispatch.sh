@@ -24,7 +24,7 @@ set -uo pipefail
 ROOT="/home/andresdev/orca/workspaces/proyectos/abalone"
 LOG_ROOT="/tmp/opencode/dispatch"
 KILO_XDG="/tmp/opencode/kilo-cfg"
-LEDGER="$ROOT/docs/engineering/orchestration/dispatch-ledger.jsonl"
+LEDGER="${LEDGER:-/home/andresdev/orca/workspaces/proyectos/abalone-wt/integration/docs/engineering/orchestration/dispatch-ledger.jsonl}"
 TIMEOUT_MISION="${TIMEOUT_MISION:-900}"
 TIMEOUT_PREFLIGHT="${TIMEOUT_PREFLIGHT:-120}"
 
@@ -64,7 +64,12 @@ detecta_fallo() {
 }
 
 snapshot() {
-  git -C "$WORKDIR" status --porcelain 2>/dev/null | sort
+  {
+    git -C "$WORKDIR" status --porcelain 2>/dev/null | sort
+    # `status --porcelain` NO cambia cuando el agente edita un archivo que ya estaba
+    # modificado (caso típico al retomar trabajo interrumpido). El hash del diff sí.
+    git -C "$WORKDIR" diff 2>/dev/null | sha1sum
+  }
 }
 
 # ---------------------------------------------------------------- ejecución
@@ -88,6 +93,8 @@ preflight() {
           "Responde solo: OK" ;;
       kilo)
         XDG_CONFIG_HOME="$KILO_XDG" kilo run "Responde solo: OK" ;;
+      cursor)
+        cursor-agent -p --mode plan "Responde solo: OK" ;;
       *)
         echo "Agente desconocido: $agente"; exit 1 ;;
     esac
@@ -123,6 +130,11 @@ mision() {
       kilo)
         local m="${MODEL:-kilo/kilo-auto/free}"
         XDG_CONFIG_HOME="$KILO_XDG" timeout "$TIMEOUT_MISION" kilo run \
+          --model "$m" "$prompt" ;;
+      cursor)
+        # Cursor no ofrece veto fiable por comando en headless: solo se le da un worktree aislado.
+        local m="${MODEL:-auto}"
+        timeout "$TIMEOUT_MISION" cursor-agent -p --force --output-format text \
           --model "$m" "$prompt" ;;
       *)
         echo "Agente desconocido: $agente"; exit 1 ;;
@@ -173,26 +185,37 @@ if [[ -n "$MOTIVO" ]]; then
     cat "$MISSION_FILE"
   } > "$CASE_DIR/mission-fallback.md"
 
-  mision kilo "$CASE_DIR/mission-fallback.md" "$CASE_DIR/run-fallback.log"
-  RC=$?
-  snapshot > "$CASE_DIR/git-after.txt"
-  CAMBIOS_FB=$(diff "$CASE_DIR/git-before.txt" "$CASE_DIR/git-after.txt" | grep -c '^[<>]' || true)
-  # Kilo puede salir con código != 0 y aun así dejar artefactos válidos.
-  # Manda el artefacto, no el código de salida.
-  if [[ $RC -ne 0 ]] && [[ "${CAMBIOS_FB:-0}" -gt 0 ]]; then
-    echo "[dispatch] AVISO: respaldo con exit $RC pero con artefactos en el worktree" | tee -a "$CASE_DIR/meta.log"
-    RC=0
-  fi
-  if [[ $RC -ne 0 ]] || detecta_fallo "$CASE_DIR/run-fallback.log"; then
-    echo "[dispatch] FALLO TOTAL: ni el primario ni Kilo completaron la misión" | tee -a "$CASE_DIR/meta.log"
+  # Cadena de respaldo: Kilo primero, Cursor como último recurso.
+  ESTADO=""
+  for FB in kilo cursor; do
+    FB_LOG="$CASE_DIR/run-fallback-$FB.log"
+    mision "$FB" "$CASE_DIR/mission-fallback.md" "$FB_LOG"
+    RC=$?
+    snapshot > "$CASE_DIR/git-after.txt"
+    CAMBIOS_FB=$(diff "$CASE_DIR/git-before.txt" "$CASE_DIR/git-after.txt" | grep -c '^[<>]' || true)
+    # El ejecutor puede salir con código != 0 y aun así dejar artefactos válidos.
+    # Manda el artefacto, no el código de salida.
+    if [[ $RC -ne 0 ]] && [[ "${CAMBIOS_FB:-0}" -gt 0 ]]; then
+      echo "[dispatch] AVISO: $FB con exit $RC pero con artefactos en el worktree" | tee -a "$CASE_DIR/meta.log"
+      RC=0
+    fi
+    if [[ $RC -eq 0 ]] && ! detecta_fallo "$FB_LOG"; then
+      cp "$FB_LOG" "$CASE_DIR/resultado.log"
+      ESTADO="fallback_$FB"
+      CODE=3
+      MOTIVO="$MOTIVO; ejecutado por $FB"
+      break
+    fi
+    echo "[dispatch] respaldo $FB no completó la misión" | tee -a "$CASE_DIR/meta.log"
+  done
+
+  if [[ -z "$ESTADO" ]]; then
+    echo "[dispatch] FALLO TOTAL: ni el primario ni los respaldos completaron la misión" | tee -a "$CASE_DIR/meta.log"
     FIN=$(( $(date +%s) - START ))
     printf '{"task":"%s","agent":"%s","executor":"none","reason":"%s","seconds":%s}\n' \
       "$TASK" "$AGENT" "$MOTIVO" "$FIN" >> "$LEDGER"
     exit 1
   fi
-  cp "$CASE_DIR/run-fallback.log" "$CASE_DIR/resultado.log"
-  ESTADO="fallback"
-  CODE=3
 else
   cp "$CASE_DIR/run.log" "$CASE_DIR/resultado.log"
   ESTADO="primary"

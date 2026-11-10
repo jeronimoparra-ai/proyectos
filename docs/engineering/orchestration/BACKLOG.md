@@ -49,8 +49,23 @@ T-003 (Antigravity UX, 12/12). Total verificado: **32 hallazgos**; 1 rechazado, 
 | B-25 | API key Brave en cabecera | T-001K | descartado (riesgo real bajo) |
 | B-26 | "Inyección" de operadores Brave | T-002K | rechazado (dudoso) |
 
+## Nota de alcanzabilidad (verificada en código)
+
+| Hallazgo | ¿Alcanzable desde la app? | Evidencia |
+|---|---|---|
+| B-01 OAuth CSRF | **No hoy** | `grep -rn "google" app/src` no muestra ninguna llamada a `google/auth-url`; no existe pantalla de conexión |
+| B-09 `PATCH /api/auth/profile` | **No hoy** | `SettingsScreen` no llama a `updateProfile`; el endpoint no tiene consumidor |
+| B-02/B-03 spinners | **Sí** | `RootNavigator` navega a esos detalles; el fallo ocurre en uso normal |
+| B-04 cuota IA | **Sí** | `/api/ai/*` se consume desde las pantallas académicas |
+| B-11/B-12 IA | **Sí** | `generateSummary`, `processWithAI` se invocan desde la app |
+
+Consecuencia: B-01 y B-09 bajan de P0/P1 a **deuda latente** (se arreglan porque son baratos),
+y la prioridad real de la ronda 2 son los bloqueos de UX y los límites de coste.
+
 ## Ronda 2 — alcance autorizado
 
-- **FCC** (`agent/fcc-implementation`): B-01, B-09, B-11, B-12, B-13.
-- **Antigravity** (`agent/antigravity-mobile-ux`): B-02, B-03, B-05, B-06, B-07, B-08, B-19, B-20, B-21, B-22.
-- **Fase 2** (tras integrar): B-10, B-14, B-15, B-16, B-17, B-18, B-23, B-24.
+- **FCC** (`agent/fcc-implementation`): B-04 cuota por usuario, B-11 truncado, B-12 parseo explícito.
+- **Antigravity** (`agent/antigravity-mobile-ux`): B-02, B-03 (x3), B-06, B-07, B-20.
+- **Kiro**: verificación mecánica de `borderColor` sin `borderWidth`.
+- **Fase 2** (tras integrar): B-01, B-09, B-10, B-14, B-15, B-16, B-17, B-18, B-23, B-24.
+

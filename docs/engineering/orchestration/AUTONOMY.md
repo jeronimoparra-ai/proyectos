@@ -14,6 +14,7 @@ Regla: **autonomía total para lo productivo, veto explícito para lo destructiv
 | Antigravity | `--mode accept-edits` | no expone lista negra útil (`--settings` rechaza el esquema de permisos) | ✅ verificado |
 | Kiro | `--trust-tools=fs_read,fs_write,shell` | por herramienta, no por comando | ✅ verificado |
 | Kilo | `permission.bash: {"*": "allow", "<destructivo>": "deny"}` | `deny` gana sobre `allow` | ✅ verificado |
+| Cursor | `--force --mode` (plan para lectura) | ❌ **sin veto efectivo**; solo worktree aislado | ✅ verificado |
 
 ## Evidencia de las pruebas
 

@@ -189,3 +189,132 @@ nada en `$HOME`, y el despachador detecta 1 cambio real.
 **Lección de contención:** `--in` no basta; hay que impedir la restauración de sesión. Es la
 diferencia entre "el agente trabaja en su carpeta" y "el agente cree que está en su carpeta".
 
+## K-002 · Kiro · RECHAZADA (falso negativo con justificación inventada)
+
+**Encargo:** verificar si existían casos de `borderColor` sin `borderWidth` en `app/src`.
+
+**Entrega de Kiro:** "Resultado: NINGUNO. Todos los 12 archivos que usan `borderColor` también
+tienen `borderWidth` definido." Incluso justificó `CalendarGrid.tsx:107`: "está dentro de un objeto
+condicional que se usa junto con otros estilos que ya tienen `borderWidth`".
+
+**Verificación de OpenCode:**
+```bash
+grep -n "borderWidth" app/src/components/calendar/CalendarGrid.tsx
+# → 0 resultados (ni una sola aparición en todo el archivo)
+```
+`styles.dayCell` (`:167-173`) no declara `borderWidth`, y el objeto condicional de `:107` solo
+aporta `borderColor`. En React Native el borde mide 0: el día actual es invisible.
+
+**Veredicto:** entrega **rechazada**. Kiro leyó los archivos y aun así negó un hecho comprobable,
+añadiendo una explicación que el código no respalda.
+
+**Regla que se deriva:** las afirmaciones **negativas** ("no existe X", "ningún caso") son las más
+caras de verificar y las que más se fallan. Kiro no emite veredictos negativos: su carril queda
+limitado a extracción positiva (listar, contar, localizar), siempre con `grep` de contraste.
+El bug B-20 de Antigravity se mantiene y ya está asignado en la ronda 2.
+
+## INC-007 · El detector de artefactos daba falsos negativos al retomar trabajo
+
+**Síntoma:** `R2-CURSOR-UX` terminó con `RECHAZADO: se esperaban artefactos y el worktree quedó
+idéntico`, aunque Cursor había editado `TasksScreen.tsx` y `HomeScreen.tsx` (mtime 12:13:29).
+
+**Causa:** `snapshot()` usaba solo `git status --porcelain`. Ese comando lista *qué archivos* están
+modificados, no *cuánto*. Como Antigravity ya había dejado esos dos archivos en estado `M` antes
+de morir, editarlos de nuevo producía exactamente el mismo texto de snapshot y el `diff`
+salía vacío.
+
+**Corrección:**
+```bash
+snapshot() {
+  {
+    git -C "$WORKDIR" status --porcelain 2>/dev/null | sort
+    git -C "$WORKDIR" diff 2>/dev/null | sha1sum
+  }
+}
+```
+El hash del diff detecta cualquier cambio de contenido, incluso sobre archivos ya modificados.
+
+**Regla:** la detección de artefactos debe mirar el **contenido**, no el estado del índice. Un
+`git status` idéntico no prueba que el agente no trabajó.
+
+## INC-006 · Antigravity agotó cuota (429) a mitad de misión
+
+**Evidencia del agente:**
+```
+error: Individual quota reached. Please upgrade your subscription to increase your limits.
+Resets in 139h57m52s. (RESOURCE_EXHAUSTED, code 429)
+```
+
+**Qué ocurrió:** R2-AGY consumió ~85k tokens de entrada y 17.8k de salida en 173 s, completó
+3 de las 5 tareas y se cortó. El despachador detectó el `exit 3`, marcó el primario como no
+disponible y lanzó el respaldo, que aceptó los artefactos parciales.
+
+**Estado de Antigravity:** no disponible por ~5.8 días. Toda misión de UX debe ir a
+**Cursor** o **FCC** hasta que se renueve la cuota. El preflight lo detectará automáticamente.
+
+**Trabajo entregado antes del corte (verificado por OpenCode):**
+- `CalendarGrid` → `borderWidth: 1` + `borderRadius` (B-20) ✔
+- `ReviewDetail` → cabecera fuera del guard, `goBack()` al agotar repasos, estado de error ✔
+- `TaskDetail`, `EventDetail`, `AcademicTaskDetail` → cabecera + error con reintento ✔
+- `npx tsc --noEmit` → limpio
+
+**Trabajo incompleto (reasignado a Cursor):**
+- `TasksScreen`: desestructura `error` pero no lo renderiza.
+- `HomeScreen`: importa `RefreshControl`/`ActivityIndicator` y `isLoading` pero no los usa.
+
+**Lección:** el corte por cuota deja código a medio escribir que **compila**. El typecheck no
+detecta código muerto por sí solo: hace falta revisar el diff contra el alcance de la misión.
+
+## Cadena de respaldo ampliada
+
+`primario → Kilo → Cursor`. Probado de extremo a extremo:
+- `T-CURSOR` con Cursor como primario → artefacto `CURSOR_HARNESS_OK`, exit 0.
+- El ledger registra el ejecutor real (`fallback_kilo`, `fallback_cursor`).
+
+## Ronda 2 — despachos de implementación (2026-11-10)
+
+### R2-AGY · Antigravity · PARCIAL (cortada por cuota) + completada por Cursor
+
+| # | Tarea | Estado | Verificación OpenCode |
+|---|---|---|---|
+| 1 | ReviewDetail: salida al agotar repasos | ✔ | `goBack()` cuando no quedan; cabecera fuera del guard; `getState()` evita closure obsoleto |
+| 2 | TaskDetail / EventDetail / AcademicTaskDetail: error con reintento | ✔ | cabecera fuera del guard + bloque de error con botón |
+| 3 | TasksScreen: error ≠ lista vacía | ✔ (Cursor) | rama `error && tasks.length === 0` con `Retry` → `loadTasks()` |
+| 4 | HomeScreen: carga y refresco | ✔ (Cursor) | `RefreshControl` + `refreshHome()` reutilizado; spinner solo en primera carga |
+| 5 | CalendarGrid: día actual visible | ✔ | `borderWidth: 1` + `borderRadius` |
+
+`npx tsc --noEmit` → limpio. `git status` → 7 archivos, todos en `app/src`. Sin cambios de tema,
+idioma ni navegación.
+
+**Nota:** Antigravity entregó 3/5 antes del 429. El trabajo a medias **compilaba**: typecheck limpio
+con `error` e `isLoading` importados y sin usar. El typecheck no sustituye revisar el diff contra
+el alcance.
+
+### R2-CURSOR-UX · Cursor · ENTREGADA
+
+Completó las tareas 3 y 4 en 2 ejecuciones. La primera fue rechazada por el despachador a causa
+del INC-007 (falso negativo), no por el agente.
+
+
+| ID | Agente | Alcance | Worktree | Estado |
+|---|---|---|---|---|
+| R2-FCC | FCC Claude | Cuota IA por usuario + truncado de contenido + parseo explícito | `agent/fcc-implementation` | EN_CURSO |
+| R2-AGY | Antigravity | 5 defectos de UX (spinners, error vs vacío, Home, borde de hoy) | `agent/antigravity-mobile-ux` | EN_CURSO |
+| K-002 | Kiro | Barrido mecánico `borderColor` sin `borderWidth` | `agent/kilo-fallback` | EN_CURSO |
+
+Perfil: `AUTONOMY.md` (FCC `dontAsk` + lista negra, Antigravity `accept-edits`).
+Timeout: 1800 s. Artefactos esperados: cambios en `git status` del worktree, no texto.
+
+## Resultado de las auditorías de la ronda 1
+
+| Tarea | Ejecutor real | Resultado | Verificación |
+|---|---|---|---|
+| T-001K | Kilo (respaldo de FCC) | 12 hallazgos | **12/12 confirmados** |
+| T-002K | Kilo (respaldo de Hermes) | 12 hallazgos | 8/12 sin reservas, 1 rechazado |
+| T-003 | Antigravity | 12 hallazgos | **12/12 confirmados** |
+| T-001 | FCC | timeout 900 s | sin entrega |
+| T-002 | Hermes | timeout 900 s | sin entrega |
+
+Ningún agente "aprobó" su propio trabajo: los tres informes fueron contrastados contra el código
+por OpenCode antes de entrar al backlog.
+

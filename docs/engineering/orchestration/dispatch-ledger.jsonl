@@ -7,3 +7,6 @@
 {"task":"T-001K","agent":"fcc","executor":"none","reason":"FCC timeout 900s (exit 124) + Kilo intento 1 abortado por config auto-reject (INC-002)","seconds":336}
 {"task":"T-AUTO","agent":"hermes","executor":"primary","reason":"","seconds":32,"changed_lines":0}
 {"task":"T-AUTO2","agent":"hermes","executor":"primary","reason":"","seconds":35,"changed_lines":1}
+{"task":"T-CURSOR","agent":"cursor","executor":"primary","reason":"","seconds":33,"changed_lines":1}
+{"task":"R2-CURSOR-UX","agent":"cursor","executor":"fallback_cursor","reason":"sin_artefactos","seconds":66,"changed_lines":0}
+{"task":"R2-CURSOR-UX","agent":"cursor","executor":"primary","reason":"sin_artefactos","seconds":26,"changed_lines":0}

@@ -12,7 +12,8 @@ Orquestador único: **OpenCode v2.2.7** (Fedora 44, Linux x86_64).
 | Hermes Agent | `hermes` | v0.22.5 | Auditoría / validación independiente | ✔ | ✔ | no probado | `chat --query-file` |
 | Antigravity | `agy` | 1.5.4 | UX/UI mobile / implementación visual | ✔ | ✔ | ✔ | `-p` |
 | Kiro CLI | `kiro-cli` | 2.36.0 | Tareas de **bajo consumo** (mecánicas, acotadas) | ✔ | ✔ | ✔ | `chat --no-interactive` |
-| Kilo Code CLI | `kilo` | 7.8.18 | **Respaldo automático** si otro agente agota cuota | ✔ | ✔ | ✔ | `run` |
+| Kilo Code CLI | `kilo` | 7.8.18 | **Respaldo 1** si otro agente agota cuota | ✔ | ✔ | ✔ | `run` |
+| Cursor Agent | `cursor-agent` | 2026.10.22 | **Respaldo 2** (último recurso) | ✔ | ✔ | ✔ | `-p` |
 
 ## Invocaciones canónicas
 
@@ -70,6 +71,9 @@ non-interactive mode`). Verificado: sin `shell`, `wc -l` falla; con `shell`, fun
 - **No**: decisiones de arquitectura, seguridad profunda, diseño de UX, implementación
   compleja ni aprobación de trabajo ajeno. Kiro **no emite juicios que cierren una tarea**;
   sus salidas son insumo verificado por OpenCode.
+- **No emite veredictos negativos** ("no existe", "ningún caso"). Caso real: K-002 negó que
+  `CalendarGrid.tsx` tuviera `borderColor` sin `borderWidth` cuando el archivo no contiene ni un
+  solo `borderWidth`. Si hace falta una afirmación negativa, la hace OpenCode con `grep`.
 - Prohibido `--trust-all-tools`. Permisos siempre enumerados por tarea.
 
 ## Modelos reales
@@ -128,3 +132,40 @@ permanente: sustituye para que la misión no se detenga.
   de contenido sigue siendo responsabilidad de OpenCode.
 - Riesgo conocido: en headless Kilo auto-aprueba la edición de archivos. Solo se le da un
   worktree aislado, nunca el árbol del usuario.
+
+## Respaldo 2 — Cursor Agent
+
+Autenticado con cuenta de Cursor. Invocación:
+
+```bash
+cursor-agent -p --force --output-format text --model auto "<prompt>"
+```
+
+- **Modelos**: `auto` (por defecto), `gpt-5.3-codex(-low/high/xhigh)`, `composer-2.5`,
+  `claude-opus-5-thinking-high`, `gpt-5.6-sol-high`, entre otros.
+- **Solo lectura**: `--mode plan` o `--mode ask`.
+- **Límite crítico comprobado**: Cursor **no ofrece veto fiable por comando** en headless.
+  Probado de tres formas: `--auto-review` permitió `rm -f`; `permissions.deny` en
+  `.cursor/cli.json` del proyecto no se aplicó; `--force` ejecuta sin preguntar. Por eso es
+  **último recurso** y solo recibe worktrees aislados, nunca el árbol del usuario.
+- No se le pasan credenciales ni rutas fuera del worktree.
+
+### Cadena de respaldo
+
+`primario → Kilo → Cursor`. El despachador registra en el ledger cuál ejecutó realmente
+(`fallback_kilo` / `fallback_cursor`) y no relanza el respaldo si el ejecutor dejó artefactos.
+
+## Disponibilidad observada (2026-11-10)
+
+| Agente | Estado | Detalle |
+|---|---|---|
+| Kiro | ✅ disponible | Barato, solo extracción positiva |
+| Cursor | ✅ disponible | Sin veto por comando; solo worktrees aislados |
+| FCC Claude | ⚠️ lento | Funciona, pero >10 min incluso en misiones de 3 tareas |
+| Antigravity | ⛔ 429 | Cuota individual agotada, reinicia en ~139 h |
+| Kilo (free) | ⛔ agotado | `Sign up for free to continue` en `kilo-auto/free` |
+| Hermes | ⛔ descartado | Modelo débil (`solar-mini4:free`), timeouts |
+
+Consecuencia práctica: hoy la cadena útil es **Cursor como primario** para implementación y
+**Kiro** para extracción. La cadena `primario → Kilo → Cursor` sigue siendo correcta para cuando
+se renueven las cuotas.
