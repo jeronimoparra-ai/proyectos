@@ -23,6 +23,7 @@ export function AcademicTaskDetailScreen({ navigation, route }: Props) {
   const {
     selectedTask,
     isLoading,
+    error,
     isProcessing,
     isSearching,
     searchResults,
@@ -78,21 +79,30 @@ export function AcademicTaskDetailScreen({ navigation, route }: Props) {
     ]);
   };
 
-  if (isLoading || !selectedTask) {
-    return (
-      <View style={[styles.loading, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
-
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={[styles.backButton, { color: colors.primary }]}>← Back</Text>
         </TouchableOpacity>
       </View>
+
+      {isLoading ? (
+        <View style={[styles.loading, { backgroundColor: colors.background }]}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : !selectedTask ? (
+        <View style={[styles.loading, { backgroundColor: colors.background }]}>
+          <Text style={[styles.backButton, { color: colors.text }]}>{error || 'Failed to load task'}</Text>
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: colors.primary, width: 140, alignSelf: 'center', marginTop: 16 }]}
+            onPress={() => loadTask(taskId)}
+          >
+            <Text style={styles.actionButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
 
       <View style={styles.content}>
         <Text style={[styles.title, { color: colors.text }]}>{selectedTask.title}</Text>
@@ -238,6 +248,8 @@ export function AcademicTaskDetailScreen({ navigation, route }: Props) {
         </View>
       </View>
     </ScrollView>
+      )}
+    </View>
   );
 }
 

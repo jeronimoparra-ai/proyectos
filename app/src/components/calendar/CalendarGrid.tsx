@@ -104,7 +104,7 @@ export function CalendarGrid({ selectedDate, currentDate, events, onDatePress }:
             style={[
               styles.dayCell,
               day.isSelected && { backgroundColor: colors.primary, borderRadius: borderRadius.full },
-              day.isToday && !day.isSelected && { borderColor: colors.primary },
+              day.isToday && !day.isSelected && { borderColor: colors.primary, borderWidth: 1, borderRadius: borderRadius.full },
             ]}
             onPress={() => onDatePress(day.date)}
           >

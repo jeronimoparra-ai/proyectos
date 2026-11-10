@@ -23,7 +23,7 @@ const sourceLabels: Record<string, string> = {
 export function EventDetailScreen({ navigation, route }: Props) {
   const { eventId } = route.params;
   const { colors, borderRadius, insets } = useTheme();
-  const { selectedEvent, isLoading, loadEvent, deleteEvent, clearSelectedEvent } = useEventStore();
+  const { selectedEvent, isLoading, error, loadEvent, deleteEvent, clearSelectedEvent } = useEventStore();
 
   useEffect(() => {
     loadEvent(eventId);
@@ -48,16 +48,8 @@ export function EventDetailScreen({ navigation, route }: Props) {
     navigation.navigate('EventForm', { eventId });
   };
 
-  if (isLoading || !selectedEvent) {
-    return (
-      <View style={[styles.loading, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
-
-  const startDate = new Date(selectedEvent.start_date);
-  const endDate = new Date(selectedEvent.end_date);
+  const startDate = selectedEvent ? new Date(selectedEvent.start_date) : new Date();
+  const endDate = selectedEvent ? new Date(selectedEvent.end_date) : new Date();
 
   const formatDate = (date: Date) =>
     date.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -66,14 +58,30 @@ export function EventDetailScreen({ navigation, route }: Props) {
     date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={[styles.backButton, { color: colors.primary }]}>← Back</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.content}>
+      {isLoading ? (
+        <View style={[styles.loading, { backgroundColor: colors.background }]}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : !selectedEvent ? (
+        <View style={[styles.loading, { backgroundColor: colors.background }]}>
+          <Text style={[styles.backButton, { color: colors.text }]}>{error || 'Failed to load event'}</Text>
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: colors.primary, width: 140, alignSelf: 'center', marginTop: 16 }]}
+            onPress={() => loadEvent(eventId)}
+          >
+            <Text style={styles.actionButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+          <View style={styles.content}>
         <View style={styles.titleRow}>
           <Text style={[styles.title, { color: colors.text }]}>{selectedEvent.title}</Text>
           <View style={[styles.sourceBadge, { backgroundColor: (selectedEvent.source === 'google' ? '#EA4335' : colors.primary) + '20' }]}>
@@ -136,6 +144,8 @@ export function EventDetailScreen({ navigation, route }: Props) {
         </View>
       </View>
     </ScrollView>
+      )}
+    </View>
   );
 }
 
