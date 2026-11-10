@@ -34,7 +34,7 @@ const statusLabels: Record<string, string> = {
 export function TaskDetailScreen({ navigation, route }: Props) {
   const { taskId } = route.params;
   const { colors, borderRadius, insets } = useTheme();
-  const { selectedTask, isLoading, loadTask, updateTask, deleteTask, clearSelectedTask } = useTaskStore();
+  const { selectedTask, isLoading, error, loadTask, updateTask, deleteTask, clearSelectedTask } = useTaskStore();
 
   useEffect(() => {
     loadTask(taskId);
@@ -63,24 +63,33 @@ export function TaskDetailScreen({ navigation, route }: Props) {
     navigation.navigate('TaskForm', { taskId });
   };
 
-  if (isLoading || !selectedTask) {
-    return (
-      <View style={[styles.loading, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
-
-  const hasDeadline = selectedTask.due_date && selectedTask.status !== 'completed';
-  const isOverdue = selectedTask.due_date && new Date(selectedTask.due_date) < new Date() && selectedTask.status !== 'completed';
+  const hasDeadline = selectedTask ? selectedTask.due_date && selectedTask.status !== 'completed' : false;
+  const isOverdue = selectedTask ? selectedTask.due_date && new Date(selectedTask.due_date) < new Date() && selectedTask.status !== 'completed' : false;
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={[styles.backButton, { color: colors.primary }]}>← Back</Text>
         </TouchableOpacity>
       </View>
+
+      {isLoading ? (
+        <View style={[styles.loading, { backgroundColor: colors.background }]}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : !selectedTask ? (
+        <View style={[styles.loading, { backgroundColor: colors.background }]}>
+          <Text style={[styles.backButton, { color: colors.text }]}>{error || 'Failed to load task'}</Text>
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: colors.primary, width: 140, alignSelf: 'center', marginTop: 16 }]}
+            onPress={() => loadTask(taskId)}
+          >
+            <Text style={styles.actionButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
 
       <View style={styles.content}>
         <View style={styles.titleRow}>
@@ -166,6 +175,8 @@ export function TaskDetailScreen({ navigation, route }: Props) {
         </View>
       </View>
     </ScrollView>
+      )}
+    </View>
   );
 }
 

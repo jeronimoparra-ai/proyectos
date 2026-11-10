@@ -1,5 +1,13 @@
 import { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  RefreshControl,
+  ActivityIndicator,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../hooks/useTheme';
 import { useReviewStore } from '../store/useReviewStore';
@@ -16,24 +24,41 @@ export function HomeScreen() {
     reviewStats,
     feedback,
     recommendations,
+    isLoading,
     loadDueReviews,
     loadReviewStats,
     loadFeedback,
     loadRecommendations,
   } = useReviewStore();
 
-  useEffect(() => {
+  const refreshHome = () => {
     loadDueReviews(5);
     loadReviewStats();
     loadFeedback();
     loadRecommendations();
+  };
+
+  useEffect(() => {
+    refreshHome();
   }, [loadDueReviews, loadReviewStats, loadFeedback, loadRecommendations]);
 
+  const hasData =
+    !!reviewStats || !!feedback || dueReviews.length > 0 || recommendations.length > 0;
+
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refreshHome} />}
+    >
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <Text style={[styles.greeting, { color: colors.text }]}>Welcome back!</Text>
       </View>
+
+      {isLoading && !hasData ? (
+        <View style={styles.loading}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : null}
 
       {reviewStats && (
         <View style={styles.statsRow}>
@@ -122,6 +147,11 @@ export function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  loading: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 60,
   },
   header: {
     paddingHorizontal: 16,
