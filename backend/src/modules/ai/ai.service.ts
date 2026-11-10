@@ -69,6 +69,8 @@ export class AIService {
   }
 
   async generateSummary(content: string): Promise<AISummaryResult> {
+    const truncatedContent = content.length > 15000 ? content.substring(0, 15000) : content;
+
     const prompt = `Analyze the following academic content and provide:
 1. A concise summary (2-3 paragraphs)
 2. Key ideas (list of 3-7 main ideas)
@@ -82,7 +84,7 @@ Respond in JSON format:
 }
 
 Content to analyze:
-${content}`;
+${truncatedContent}`;
 
     const response = await this.callOpenRouter([
       { role: 'system', content: SYSTEM_PROMPT },
@@ -92,16 +94,15 @@ ${content}`;
     try {
       const cleaned = response.replace(/```json\n?|\n?```/g, '').trim();
       return JSON.parse(cleaned) as AISummaryResult;
-    } catch {
-      return {
-        summary: response,
-        keyIdeas: [],
-        concepts: [],
-      };
+    } catch (err) {
+      console.error(`AI summary parse failed: ${err}, first 200 chars: ${response.substring(0, 200)}`);
+      throw createAppError('AI response parse failed', 502, 'AI_PARSE_ERROR');
     }
   }
 
   async generateQuestions(content: string, count: number = 5): Promise<AIQuestionsResult> {
+    const truncatedContent = content.length > 15000 ? content.substring(0, 15000) : content;
+
     const prompt = `Based on the following academic content, generate ${count} review questions that test understanding of the key concepts.
 
 Respond in JSON format:
@@ -110,7 +111,7 @@ Respond in JSON format:
 }
 
 Content:
-${content}`;
+${truncatedContent}`;
 
     const response = await this.callOpenRouter([
       { role: 'system', content: SYSTEM_PROMPT },
@@ -120,16 +121,19 @@ ${content}`;
     try {
       const cleaned = response.replace(/```json\n?|\n?```/g, '').trim();
       return JSON.parse(cleaned) as AIQuestionsResult;
-    } catch {
-      return { questions: [] };
+    } catch (err) {
+      console.error(`AI questions parse failed: ${err}, first 200 chars: ${response.substring(0, 200)}`);
+      throw createAppError('AI response parse failed', 502, 'AI_PARSE_ERROR');
     }
   }
 
   async explainConcept(concept: string, context: string): Promise<AIExplanationResult> {
+    const truncatedContext = context.length > 15000 ? context.substring(0, 15000) : context;
+
     const prompt = `Explain the following concept in simple terms, suitable for a student:
 
 Concept: ${concept}
-Context: ${context}
+Context: ${truncatedContext}
 
 Provide a clear, concise explanation with examples if helpful.
 
@@ -146,8 +150,9 @@ Respond in JSON format:
     try {
       const cleaned = response.replace(/```json\n?|\n?```/g, '').trim();
       return JSON.parse(cleaned) as AIExplanationResult;
-    } catch {
-      return { explanation: response };
+    } catch (err) {
+      console.error(`AI explanation parse failed: ${err}, first 200 chars: ${response.substring(0, 200)}`);
+      throw createAppError('AI response parse failed', 502, 'AI_PARSE_ERROR');
     }
   }
 
