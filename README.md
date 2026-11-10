@@ -185,6 +185,13 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=tu-anon-key
 EXPO_PUBLIC_API_URL=http://localhost:3000
 ```
 
+> Estos valores son plantillas. La app los detecta como no configurados y muestra
+> la pantalla "Configuración incompleta" en lugar de arrancar con datos falsos.
+>
+> Para el **APK descargable** no se usa `app/.env`: las mismas variables se definen
+> como secrets del repositorio (`Settings → Secrets and variables → Actions`) y el
+> workflow las inyecta al compilar.
+
 ### 3. Configurar base de datos
 
 Ejecuta el SQL de `backend/src/database/migrations/` en tu Supabase Dashboard > SQL Editor.
@@ -220,7 +227,7 @@ cd app && npx expo start
 
 ## Estado Actual del Proyecto
 
-**Última actualización:** 19/9/2026
+**Última actualización:** 10/11/2026
 
 ### ✅ Qué está funcionando
 
@@ -271,6 +278,9 @@ Para que quien rote el proyecto sepa qué debe configurar de nuevo al clonar el 
 - EXPO_PUBLIC_SUPABASE_URL
 - EXPO_PUBLIC_SUPABASE_ANON_KEY
 - EXPO_PUBLIC_API_URL
+
+**GitHub Actions (para el APK):** los tres `EXPO_PUBLIC_*` anteriores como secrets del
+repositorio. Sin ellos el APK se compila igual y muestra la pantalla de configuración.
 
 ---
 
