@@ -1,0 +1,9 @@
+{"task":"T-SMOKE","agent":"kilo","executor":"primary","reason":"","seconds":40,"changed_lines":1}
+{"task":"T-FALLBACK","agent":"fcc","executor":"fallback","reason":"fallback forzado por DISPATCH_FORCE_FALLBACK","seconds":22,"changed_lines":0}
+{"task":"T-FALLBACK2","agent":"fcc","executor":"fallback","reason":"prueba de ruta de respaldo","seconds":19,"changed_lines":1}
+{"task":"T-002-KILO","agent":"hermes","executor":"none","reason":"Hermes timeout 900s (exit 124) en intento primario","seconds":170}
+{"task":"T-001-KILO","agent":"fcc","executor":"none","reason":"FCC timeout 900s (exit 124) en intento primario","seconds":173}
+{"task":"T-002K","agent":"hermes","executor":"none","reason":"Hermes timeout 900s (exit 124) + Kilo intento 1 abortado por config auto-reject (INC-002)","seconds":256}
+{"task":"T-001K","agent":"fcc","executor":"none","reason":"FCC timeout 900s (exit 124) + Kilo intento 1 abortado por config auto-reject (INC-002)","seconds":336}
+{"task":"T-AUTO","agent":"hermes","executor":"primary","reason":"","seconds":32,"changed_lines":0}
+{"task":"T-AUTO2","agent":"hermes","executor":"primary","reason":"","seconds":35,"changed_lines":1}
