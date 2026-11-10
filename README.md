@@ -22,47 +22,46 @@
 
 ## Descargar la App
 
-### Opción 1: Descarga directa (Recomendado)
+### Descarga directa
 
-Haz clic en el botón para descargar la última versión:
+El APK se construye automáticamente en GitHub Actions y se publica como asset de una Release:
 
 | Plataforma | Enlace de descarga |
 |------------|-------------------|
-| **Android** | **[Descargar APK](https://expo.dev/artifacts/eas/nA_nJQwpmnMsGq00ipdoFiQtlLQ1keitvIkcCXYk9FA.apk)** |
+| **Android** | **[Descargar APK](https://github.com/jeronimoparra-ai/proyectos/releases/latest/download/productivity-app.apk)** |
 
-> **Instrucciones:**
-> 1. Haz clic en "Descargar APK"
-> 
-> **Fecha de build:** 15/9/2026, 12:12 p. m. (build más reciente)
-> 2. Abre el archivo descargado
-> 3. Si es necesario, permite instalación de fuentes desconocidas
-> 4. Instala y abre la app
+> **Primera vez:** si el enlace devuelve 404, todavía no existe ninguna Release.
+> Ve a **Actions → Build APK → Run workflow** y espera unos 15 minutos.
+> A partir de ahí el enlace es siempre el mismo y apunta a la última compilación.
 
-> ⚠️ **Nota:** Si al abrir la app muestra un mensaje de "Configuración necesaria", las variables de entorno de Supabase no están configuradas. La app ahora muestra un mensaje explicando qué falta y ofrece un botón "Reintentar". Para funcionalidad completa, reconstruye la app con tu cuenta de Supabase configurada.
+**Instalación en el teléfono:**
 
-### Opción 2: Build yourself
+1. Abre el enlace desde el teléfono y descarga el archivo.
+2. Si Android lo pide, permite instalar desde "orígenes desconocidos" para tu navegador.
+3. Instala y abre la app.
 
-```bash
-# Instalar EAS CLI
-npm install -g eas-cli
+> ⚠️ **Si al abrirla ves "Configuración incompleta"**, es que el build se hizo sin las
+> variables de Supabase. Es intencionado: la app avisa en vez de cerrarse sola.
+> Define los secrets `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` y
+> `EXPO_PUBLIC_API_URL` en **Settings → Secrets and variables → Actions** y relanza
+> el workflow. El APK nuevo ya se conectará al backend.
 
-# Login
-eas login
-
-# Build APK
-eas build --profile preview --platform android
-```
-
-### Opción 2: Build yourself
+### Compilar el APK tú mismo
 
 ```bash
-# Instalar EAS CLI
+# Opción A — GitHub Actions (recomendado, sin instalar nada)
+#   Actions → Build APK → Run workflow
+
+# Opción B — local, requiere Android SDK y JDK 17
+cd app
+npm ci --legacy-peer-deps
+npx expo prebuild --platform android
+cd android && ./gradlew assembleRelease
+# APK en android/app/build/outputs/apk/release/app-release.apk
+
+# Opción C — EAS (el enlace que genera caduca, no sirve para distribuir)
 npm install -g eas-cli
-
-# Login
 eas login
-
-# Build APK
 eas build --profile preview --platform android
 ```
 
@@ -225,28 +224,36 @@ cd app && npx expo start
 
 ### ✅ Qué está funcionando
 
-- Backend compila y pasa tests (16/16 vitest tests passing)
+- Backend compila y pasa tests (21/21 vitest tests passing)
 - Tipos correctos en app y backend (`npm run typecheck` pasa en ambos)
 - ESLint configurado (aunque hay 119 errores por resolver en el código existente)
 - Módulo StudySessions creado en el backend
 - Timeouts agregados en llamadas de red
 - Backend desplegado en Render (plan free, actualmente en reposo)
+- APK compilable sin EAS mediante GitHub Actions, con enlace de descarga permanente
 
-### ⚠️ Problema activo sin resolver
+### 🔧 Problema del APK: qué se encontró (10/11/2026)
 
-- La app compilada (APK vía EAS) se abre un instante y se cierra sola en el dispositivo real
-- Causa aún no confirmada
+El enlace de descarga anterior devolvía **404**: los artefactos de EAS caducan. Además el
+build se generaba con valores de ejemplo, lo que explica que la app no llegara a arrancar bien.
 
-### 🔍 Qué se descartó como causa
+Causas identificadas y corregidas:
 
-- Variables de entorno en Render: configuradas y verificadas
-- Variables de entorno en EAS (preview): verificación no posible (EAS no configurado en este directorio); últimos intentos de configuración realizados pero build no se completó exitosamente
-- Backend desplegado y accesible: responde con 503 (free tier en reposo), accesible en https://productivity-app-backend.onrender.com
+1. **`app/src/config/env.ts` usaba `process.env[nombre]`.** Expo solo sustituye las
+   referencias literales (`process.env.EXPO_PUBLIC_X`); con acceso dinámico el valor queda
+   vacío en el dispositivo. La validación no podía pasar nunca en un build real.
+   Corregido con lecturas estáticas.
+2. **`app/eas.json` incluía `https://tu-proyecto.supabase.co` y `tu-anon-key` como si fueran
+   configuración real.** Como no estaban vacíos, la app se consideraba configurada y apuntaba
+   a un Supabase inexistente. Eliminados del perfil de build.
+3. **`validateEnv` solo comprobaba que la variable no estuviera vacía.** Ahora también rechaza
+   placeholders conocidos y dominios de ejemplo.
+4. **`ConfigErrorScreen.tsx` existía pero nadie lo usaba.** `App.tsx` tenía una copia inline
+   más pobre. Ahora se usa el componente real.
 
-### 📋 Próximo paso recomendado para retomar
-
-- Conectar el dispositivo por USB y revisar el log real con `adb logcat` (aún no hecho)
-- O revisar si ya existe un Error Boundary de React capturando el error de inicialización
+**Pendiente de confirmar:** si el cierre instantáneo tenía además una causa nativa, hay que
+verlo con `adb logcat` en un dispositivo real. Ahora, sin configuración válida, la app muestra
+la pantalla de aviso en lugar de continuar con un backend falso.
 
 ### 🔐 Variables de entorno necesarias (nombres únicamente)
 

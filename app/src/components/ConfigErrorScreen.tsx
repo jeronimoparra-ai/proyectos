@@ -39,15 +39,19 @@ export function ConfigErrorScreen({ validation }: ConfigErrorScreenProps) {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Cómo solucionarlo:</Text>
         <Text style={styles.instruction}>
-          1. Crea las variables de entorno en EAS con{'\n'}
+          1. Define los secrets del repositorio en{'\n'}
+          <Text style={styles.code}>Settings → Secrets and variables → Actions</Text>
+        </Text>
+        <Text style={styles.instruction}>
+          2. Vuelve a lanzar el workflow{'\n'}
+          <Text style={styles.code}>Actions → Build APK → Run workflow</Text>
+        </Text>
+        <Text style={styles.instruction}>
+          3. Instala el APK nuevo cuando termine el build
+        </Text>
+        <Text style={styles.instruction}>
+          Si compilas con EAS, define las variables con{'\n'}
           <Text style={styles.code}>eas env:create</Text>
-        </Text>
-        <Text style={styles.instruction}>
-          2. Asegúrate de que el perfil de build en eas.json incluya las variables
-        </Text>
-        <Text style={styles.instruction}>
-          3. Reconstruye la app con{'\n'}
-          <Text style={styles.code}>eas build -p android --profile preview</Text>
         </Text>
       </View>
     </ScrollView>

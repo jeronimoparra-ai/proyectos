@@ -1,0 +1,100 @@
+name: Build APK
+
+# Genera un APK instalable sin depender de EAS y lo publica como asset de una
+# Release, para tener un enlace de descarga permanente que no caduque.
+#
+# Enlace resultante:
+#   https://github.com/jeronimoparra-ai/proyectos/releases/latest/download/productivity-app.apk
+#
+# Si no existen los secrets de Supabase, el APK se construye igualmente y al
+# abrirlo muestra la pantalla "Configuración incompleta" en lugar de cerrarse.
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-apk
+  cancel-in-progress: true
+
+env:
+  EXPO_NO_TELEMETRY: '1'
+  # Se inlinean en el bundle al compilar. Vacios => la app avisa en vez de romper.
+  EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+  EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+  EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL }}
+
+jobs:
+  apk:
+    name: Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: app
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Instalar dependencias
+        run: npm ci --legacy-peer-deps
+
+      - name: Cache de Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('app/package-lock.json') }}
+          restore-keys: gradle-${{ runner.os }}-
+
+      - name: Generar proyecto Android
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Compilar APK de release
+        working-directory: app/android
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Preparar artefacto
+        run: |
+          cp android/app/build/outputs/apk/release/app-release.apk productivity-app.apk
+          ls -lh productivity-app.apk
+
+      - name: Subir artefacto de la ejecucion
+        uses: actions/upload-artifact@v4
+        with:
+          name: productivity-app-apk
+          path: app/productivity-app.apk
+          retention-days: 30
+
+      - name: Publicar en la Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-latest
+          name: APK · última compilación
+          body: |
+            APK generado automáticamente desde `${{ github.sha }}`.
+
+            Instalación: descarga el archivo, permite orígenes desconocidos e instala.
+
+            Si al abrirla ves "Configuración incompleta", el build no tenía las
+            variables de Supabase: hay que definir los secrets del repositorio y
+            volver a lanzar este workflow.
+          files: app/productivity-app.apk
+          make_latest: true
