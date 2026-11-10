@@ -1,15 +1,20 @@
 name: CI
 
+# La rama por defecto del repositorio es `master`. Antes este workflow solo
+# escuchaba a `main`, que no existe, asi que no se ejecutaba nunca.
 on:
   push:
-    branches: [main]
+    branches: [master, main]
   pull_request:
-    branches: [main]
+    branches: [master, main]
+
+env:
+  EXPO_NO_TELEMETRY: '1'
 
 jobs:
   backend:
     name: Backend
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: backend
@@ -33,7 +38,7 @@ jobs:
 
   app:
     name: App
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: app
@@ -47,7 +52,14 @@ jobs:
           cache: npm
           cache-dependency-path: app/package-lock.json
 
-      - run: npm ci
+      # --legacy-peer-deps es obligatorio: el lockfile resuelve `ws` con dos
+      # versiones por peers y `npm ci` a secas aborta con EUSAGE.
+      - run: npm ci --legacy-peer-deps
+
+      # Detecta dependencias nativas no declaradas (fue la causa del APK que se
+      # cerraba solo: @expo/vector-icons sin expo-font directo).
+      - name: Expo Doctor
+        run: npx expo-doctor
 
       - name: Typecheck
         run: npx tsc --noEmit
