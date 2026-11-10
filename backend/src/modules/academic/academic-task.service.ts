@@ -142,8 +142,9 @@ export class AcademicTaskService {
     }
 
     const fullContent = contentParts.join('\n\n');
-    const summaryResult = await aiService.generateSummary(fullContent);
-    const questionsResult = await aiService.generateQuestions(fullContent);
+    const truncatedContent = fullContent.length > 15000 ? fullContent.substring(0, 15000) : fullContent;
+    const summaryResult = await aiService.generateSummary(truncatedContent);
+    const questionsResult = await aiService.generateQuestions(truncatedContent);
 
     const { error } = await supabase
       .from('academic_tasks')

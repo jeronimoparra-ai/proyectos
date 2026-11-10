@@ -31,7 +31,7 @@ const PRIORITY_FILTERS: { label: string; value: TaskPriority | undefined }[] = [
 
 export function TasksScreen({ navigation }: TabScreenProps<'Tasks'>) {
   const { colors, spacing, borderRadius, insets } = useTheme();
-  const { tasks, isLoading, filters, setFilters, loadTasks, completeTask } = useTaskStore();
+  const { tasks, isLoading, error, filters, setFilters, loadTasks, completeTask } = useTaskStore();
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
@@ -118,6 +118,16 @@ export function TasksScreen({ navigation }: TabScreenProps<'Tasks'>) {
         <View style={styles.loading}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
+      ) : error && tasks.length === 0 ? (
+        <View style={styles.empty}>
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{error}</Text>
+          <TouchableOpacity
+            style={[styles.retryButton, { backgroundColor: colors.primary, borderRadius: borderRadius.md }]}
+            onPress={() => loadTasks()}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
       ) : (
         <FlatList
           data={tasks}
@@ -199,8 +209,18 @@ const styles = StyleSheet.create({
   empty: {
     alignItems: 'center',
     paddingTop: 60,
+    gap: 16,
   },
   emptyText: {
     fontSize: 16,
+  },
+  retryButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
   },
 });

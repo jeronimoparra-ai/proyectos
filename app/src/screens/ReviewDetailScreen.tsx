@@ -32,6 +32,7 @@ export function ReviewDetailScreen({ navigation, route }: Props) {
     reviewHistory,
     isLoading,
     isSubmitting,
+    error,
     loadDueReviews,
     loadReviewHistory,
     submitReview,
@@ -55,13 +56,13 @@ export function ReviewDetailScreen({ navigation, route }: Props) {
         time_spent_seconds: 60,
       });
       setSelectedQuality(null);
-      loadDueReviews(20);
+      await loadDueReviews(20);
       loadReviewHistory(taskId);
-      if (dueReviews.length > 0) {
-        const nextTask = dueReviews.find((t) => t.id !== taskId);
-        if (nextTask) {
-          navigation.replace('ReviewDetail', { taskId: nextTask.id });
-        }
+      const remaining = useReviewStore.getState().dueReviews.filter((t) => t.id !== taskId);
+      if (remaining.length > 0) {
+        navigation.replace('ReviewDetail', { taskId: remaining[0].id });
+      } else {
+        navigation.goBack();
       }
     } catch (error) {
       console.error('Error submitting review:', error);
@@ -69,27 +70,38 @@ export function ReviewDetailScreen({ navigation, route }: Props) {
     }
   };
 
-  if (isLoading || !currentTask) {
-    return (
-      <View style={[styles.loading, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
-
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={[styles.backButton, { color: colors.primary }]}>← Back</Text>
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Review</Text>
-        <Text style={[styles.remaining, { color: colors.textTertiary }]}>
-          {dueReviews.length} remaining
-        </Text>
+        {!isLoading && currentTask && (
+          <Text style={[styles.remaining, { color: colors.textTertiary }]}>
+            {dueReviews.length} remaining
+          </Text>
+        )}
       </View>
 
-      <View style={styles.content}>
+      {isLoading ? (
+        <View style={[styles.loading, { backgroundColor: colors.background }]}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : !currentTask ? (
+        <View style={[styles.loading, { backgroundColor: colors.background }]}>
+          <Text style={[styles.backButton, { color: colors.text }]}>{error || 'No review available'}</Text>
+          <TouchableOpacity
+            style={[styles.submitButton, { backgroundColor: colors.primary, width: 160, alignSelf: 'center', marginTop: 24 }]}
+            onPress={() => loadDueReviews(20)}
+            disabled={isSubmitting}
+          >
+            <Text style={styles.submitText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+          <View style={styles.content}>
         <View style={[styles.taskCard, { backgroundColor: colors.surface, borderRadius: borderRadius.lg }]}>
           {currentTask.subject && (
             <Text style={[styles.subject, { color: colors.primary }]}>{currentTask.subject}</Text>
@@ -203,7 +215,9 @@ export function ReviewDetailScreen({ navigation, route }: Props) {
           </View>
         )}
       </View>
-    </ScrollView>
+        </ScrollView>
+      )}
+    </View>
   );
 }
 
