@@ -3,10 +3,10 @@ import { z } from 'zod';
 export const createAcademicTaskSchema = z.object({
   title: z.string().min(1, 'Title is required').max(255),
   subject: z.string().max(100).optional(),
-  content: z.string().optional(),
+  content: z.string().max(200000).optional(),
   materials: z.array(z.object({
     type: z.enum(['text', 'pdf', 'image', 'link']),
-    content: z.string().min(1),
+    content: z.string().min(1).max(200000),
     file_name: z.string().optional(),
   })).optional(),
   topics: z.array(z.object({
@@ -18,7 +18,7 @@ export const createAcademicTaskSchema = z.object({
 export const updateAcademicTaskSchema = z.object({
   title: z.string().min(1).max(255).optional(),
   subject: z.string().max(100).optional().nullable(),
-  content: z.string().optional().nullable(),
+  content: z.string().max(200000).optional().nullable(),
   summary: z.string().optional().nullable(),
   key_ideas: z.array(z.string()).optional().nullable(),
   concepts: z.array(z.string()).optional().nullable(),
