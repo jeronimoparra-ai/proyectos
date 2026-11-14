@@ -16,4 +16,10 @@ export const env = {
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
   braveSearchApiKey: process.env.BRAVE_SEARCH_API_KEY ?? '',
   expoAccessToken: process.env.EXPO_ACCESS_TOKEN ?? '',
+  // Reminder worker
+  reminderCheckIntervalMs: parseInt(process.env.REMINDER_CHECK_INTERVAL_MS ?? '60000', 10),
+  reminderBatchMax: parseInt(process.env.REMINDER_BATCH_MAX ?? '25', 10),
+  reminderClaimTtlMs: parseInt(process.env.REMINDER_CLAIM_TTL_MS ?? '300000', 10),
+  reminderRetryMaxAttempts: parseInt(process.env.REMINDER_RETRY_MAX_ATTEMPTS ?? '3', 10),
+  expoRequestTimeoutMs: parseInt(process.env.EXPO_REQUEST_TIMEOUT_MS ?? '15000', 10),
 } as const;
