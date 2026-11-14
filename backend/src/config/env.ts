@@ -11,6 +11,7 @@ export const env = {
   openrouterApiKey: process.env.OPENROUTER_API_KEY ?? '',
   corsOrigin: process.env.CORS_ORIGIN ?? 'http://localhost:8081',
   frontendUrl: process.env.FRONTEND_URL ?? 'http://localhost:8081',
+  googleRedirectUri: process.env.GOOGLE_REDIRECT_URI ?? 'http://localhost:8081/',
   googleClientId: process.env.GOOGLE_CLIENT_ID ?? '',
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
   braveSearchApiKey: process.env.BRAVE_SEARCH_API_KEY ?? '',

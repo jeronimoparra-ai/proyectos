@@ -10,7 +10,7 @@ export class EventService {
       .eq('user_id', userId)
       .is('deleted_at', null);
 
-    if (query.start_after) qb = qb.gte('start_date', query.start_after);
+    if (query.start_after) qb = qb.gt('end_date', query.start_after);
     if (query.start_before) qb = qb.lte('start_date', query.start_before);
     if (query.category_id) qb = qb.eq('category_id', query.category_id);
     if (query.source) qb = qb.eq('source', query.source);
@@ -105,62 +105,10 @@ export class EventService {
     return data ?? [];
   }
 
-  async syncFromGoogle(userId: string, googleEvents: Array<{
-    external_id: string;
-    title: string;
-    description?: string;
-    start_date: string;
-    end_date: string;
-    all_day?: boolean;
-    location?: string;
-  }>) {
-    const results = { created: 0, updated: 0, skipped: 0 };
-
-    for (const googleEvent of googleEvents) {
-      const { data: existing } = await supabase
-        .from('events')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('external_id', googleEvent.external_id)
-        .eq('source', 'google')
-        .single();
-
-      if (existing) {
-        const { error } = await supabase
-          .from('events')
-          .update({
-            title: googleEvent.title,
-            description: googleEvent.description,
-            start_date: googleEvent.start_date,
-            end_date: googleEvent.end_date,
-            all_day: googleEvent.all_day ?? false,
-            location: googleEvent.location,
-          })
-          .eq('id', existing.id);
-
-        if (error) throw createAppError(error.message, 500, 'DB_ERROR');
-        results.updated++;
-      } else {
-        const { error } = await supabase
-          .from('events')
-          .insert({
-            user_id: userId,
-            external_id: googleEvent.external_id,
-            title: googleEvent.title,
-            description: googleEvent.description,
-            start_date: googleEvent.start_date,
-            end_date: googleEvent.end_date,
-            all_day: googleEvent.all_day ?? false,
-            location: googleEvent.location,
-            source: 'google',
-          });
-
-        if (error) throw createAppError(error.message, 500, 'DB_ERROR');
-        results.created++;
-      }
-    }
-
-    return results;
+  /** @deprecated Use POST /google/sync: imported data must come from Google. */
+  async syncFromGoogle(userId: string, _legacyEvents?: unknown) {
+    const { googleCalendarService } = await import('../google/google-calendar.service');
+    return googleCalendarService.syncEvents(userId);
   }
 }
 

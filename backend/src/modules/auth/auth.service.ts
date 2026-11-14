@@ -1,4 +1,4 @@
-import { supabase } from '../../database/supabase';
+import { supabase, signOutVerifiedUser, updateVerifiedUser } from '../../database/supabase';
 import { env } from '../../config/env';
 import { createAppError } from '../../middleware/error.middleware';
 import type { RegisterInput, LoginInput, ForgotPasswordInput } from './auth.schema';
@@ -54,7 +54,7 @@ export class AuthService {
   }
 
   async logout(token: string) {
-    const { error } = await supabase.auth.admin.signOut(token);
+    const { error } = await signOutVerifiedUser(token);
 
     if (error) {
       throw createAppError('Failed to logout', 500, 'LOGOUT_FAILED');
@@ -106,7 +106,7 @@ export class AuthService {
   }
 
   async updateProfile(updates: { displayName?: string }) {
-    const { data, error } = await supabase.auth.updateUser({
+    const { data, error } = await updateVerifiedUser({
       data: updates.displayName ? { display_name: updates.displayName } : undefined,
     });
 

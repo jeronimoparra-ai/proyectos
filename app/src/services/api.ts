@@ -16,13 +16,28 @@ interface RequestOptions extends RequestInit {
 
 class ApiClient {
   private baseUrl: string;
+  private activeControllers = new Set<AbortController>();
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
   }
 
+  abortAll() {
+    for (const controller of this.activeControllers) {
+      try {
+        controller.abort();
+      } catch {
+        // Ignore errors during abort
+      }
+    }
+    this.activeControllers.clear();
+  }
+
   private async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
     const { token, timeoutMs = DEFAULT_TIMEOUT_MS, ...fetchOptions } = options;
+
+    const controller = new AbortController();
+    this.activeControllers.add(controller);
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -33,24 +48,38 @@ class ApiClient {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const signal = options.signal ?? (
-      typeof AbortSignal.timeout === 'function'
-        ? AbortSignal.timeout(timeoutMs)
-        : undefined
-    );
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    if (timeoutMs > 0) {
+      timeoutId = setTimeout(() => {
+        controller.abort();
+      }, timeoutMs);
+    }
+
+    if (options.signal) {
+      if (options.signal.aborted) {
+        controller.abort();
+      } else {
+        options.signal.addEventListener('abort', () => controller.abort(), { once: true });
+      }
+    }
 
     let response: Response;
     try {
       response = await fetch(`${this.baseUrl}${endpoint}`, {
         ...fetchOptions,
         headers,
-        signal,
+        signal: controller.signal,
       });
     } catch (err: unknown) {
       if (err instanceof Error && (err.name === 'TimeoutError' || err.name === 'AbortError')) {
         throw new ApiTimeoutError();
       }
       throw err;
+    } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      this.activeControllers.delete(controller);
     }
 
     if (!response.ok) {
@@ -81,8 +110,12 @@ class ApiClient {
     return this.request<T>(endpoint, { method: 'PATCH', body: JSON.stringify(body), token });
   }
 
-  delete<T>(endpoint: string, token?: string) {
-    return this.request<T>(endpoint, { method: 'DELETE', token });
+  delete<T>(endpoint: string, token?: string, body?: unknown) {
+    return this.request<T>(endpoint, {
+      method: 'DELETE',
+      token,
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+    });
   }
 }
 

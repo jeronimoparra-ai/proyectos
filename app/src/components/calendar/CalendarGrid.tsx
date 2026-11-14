@@ -1,11 +1,12 @@
 import { useMemo } from 'react';
+import { eventOccursOnDay } from './event-days';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTheme } from '../../hooks';
 
 interface CalendarGridProps {
   selectedDate: Date;
   currentDate: Date;
-  events: Array<{ start_date: string }>;
+  events: Array<{ start_date: string; end_date?: string; all_day?: boolean; start_day?: string | null; end_day?: string | null }>;
   onDatePress: (date: Date) => void;
 }
 
@@ -41,7 +42,6 @@ export function CalendarGrid({ selectedDate, currentDate, events, onDatePress }:
 
     const days: Array<{ date: Date; isCurrentMonth: boolean; isToday: boolean; isSelected: boolean; hasEvents: boolean }> = [];
 
-    const eventDates = new Set(events.map((e) => e.start_date.split('T')[0]));
 
     for (let i = 0; i < firstDay; i++) {
       const prevMonthDate = new Date(year, month, -firstDay + i + 1);
@@ -62,7 +62,7 @@ export function CalendarGrid({ selectedDate, currentDate, events, onDatePress }:
         isCurrentMonth: true,
         isToday: formatDate(date) === formatDate(today),
         isSelected: formatDate(date) === formatDate(selectedDate),
-        hasEvents: eventDates.has(formatDate(date)),
+        hasEvents: events.some(event => eventOccursOnDay(event, date)),
       });
     }
 

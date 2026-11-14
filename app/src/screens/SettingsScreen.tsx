@@ -11,9 +11,11 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
-import { useAuthStore, useAppStore } from '../store';
+import { useAuthStore, useAppStore, clearAllUserStores } from '../store';
 import { supabase } from '../services/supabase';
 import { notificationService } from '../services/notification';
+import { apiClient } from '../services/api';
+import { GoogleCalendarSection } from '../components/calendar/GoogleCalendarSection';
 import type { ColorScheme } from '../types';
 
 const THEME_OPTIONS: { label: string; value: ColorScheme }[] = [
@@ -71,10 +73,27 @@ export function SettingsScreen() {
         text: 'Sign Out',
         style: 'destructive',
         onPress: async () => {
-          if (supabase) {
-            await supabase.auth.signOut();
+          // 1. Cancelar peticiones de red pendientes del usuario saliente
+          apiClient.abortAll();
+
+          // 2. Desvinculación idempotente del dispositivo ANTES de invalidar la sesión
+          try {
+            await notificationService.unbindCurrentDevice();
+          } catch (err) {
+            console.warn('[SettingsScreen] Failed to unbind push token before signOut:', err);
           }
-          signOut();
+
+          // 3. Invalidar la sesión en Supabase
+          if (supabase) {
+            try {
+              await supabase.auth.signOut();
+            } catch (err) {
+              console.warn('[SettingsScreen] Supabase signOut error:', err);
+            }
+          }
+
+          // 4. Limpiar stores Zustand y estado de usuario
+          clearAllUserStores();
         },
       },
     ]);
@@ -176,6 +195,8 @@ export function SettingsScreen() {
           Push notifications are enabled for reminders and tasks
         </Text>
       </View>
+
+      <GoogleCalendarSection />
 
       <TouchableOpacity
         style={[styles.signOutButton, { borderColor: colors.error, borderRadius: borderRadius.md }]}

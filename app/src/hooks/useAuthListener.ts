@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
-import { useAuthStore } from '../store';
+import { useAuthStore, clearAllUserStores } from '../store';
 import { supabase } from '../services/supabase';
+import { apiClient } from '../services/api';
 import type { User } from '../types';
 
 export function useAuthListener() {
@@ -39,7 +40,7 @@ export function useAuthListener() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
         setUser({
           id: session.user.id,
@@ -49,7 +50,8 @@ export function useAuthListener() {
           created_at: session.user.created_at,
         });
       } else {
-        setUser(null);
+        apiClient.abortAll();
+        clearAllUserStores();
       }
     });
 

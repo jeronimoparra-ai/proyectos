@@ -5,20 +5,49 @@ import type { RegisterPushTokenInput } from './notification.schema';
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 
-interface PushPayload {
+export interface PushPayload {
   title: string;
   body: string;
   data?: Record<string, unknown>;
   badge?: number;
 }
 
+export interface PushSendOptions {
+  guaranteedRecipient?: boolean;
+}
+
 export class NotificationService {
   async registerPushToken(userId: string, input: RegisterPushTokenInput) {
+    // Check if token already exists
+    const { data: existing } = await supabase
+      .from('push_tokens')
+      .select('user_id, active, updated_at')
+      .eq('token', input.token)
+      .maybeSingle();
+
+    if (existing && existing.user_id !== userId) {
+      // Guard against late response from previous session:
+      // If client timestamp is older than current token record, reject stale reactivation
+      if (input.clientTimestamp) {
+        const clientTime = new Date(input.clientTimestamp).getTime();
+        const existingTime = new Date(existing.updated_at).getTime();
+        if (!isNaN(clientTime) && !isNaN(existingTime) && clientTime < existingTime) {
+          return existing;
+        }
+      }
+    }
+
     const { data, error } = await supabase
       .from('push_tokens')
       .upsert(
-        { user_id: userId, token: input.token, platform: input.platform, active: true, updated_at: new Date().toISOString() },
-        { onConflict: 'user_id,token' }
+        {
+          user_id: userId,
+          token: input.token,
+          platform: input.platform,
+          active: true,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'token' }
       )
       .select()
       .single();
@@ -31,6 +60,16 @@ export class NotificationService {
     const { error } = await supabase
       .from('push_tokens')
       .delete()
+      .eq('user_id', userId)
+      .eq('token', token);
+
+    if (error) throw createAppError(error.message, 500, 'DB_ERROR');
+  }
+
+  async deactivatePushToken(userId: string, token: string) {
+    const { error } = await supabase
+      .from('push_tokens')
+      .update({ active: false, updated_at: new Date().toISOString() })
       .eq('user_id', userId)
       .eq('token', token);
 
@@ -102,15 +141,31 @@ export class NotificationService {
     return notification;
   }
 
-  async sendPushNotification(userId: string, payload: PushPayload): Promise<boolean> {
+  async sendPushNotification(
+    userId: string,
+    payload: PushPayload,
+    options?: PushSendOptions
+  ): Promise<boolean> {
     const tokens = await this.getPushTokens(userId);
     if (tokens.length === 0) return false;
 
+    const isGuaranteed = options?.guaranteedRecipient ?? true;
+
+    // Sanitize data payload: ensure minimal payload and attach recipientUserId for client verification
+    const safeData: Record<string, unknown> = {
+      ...(payload.data ?? {}),
+      recipientUserId: userId,
+    };
+    delete safeData.password;
+    delete safeData.email;
+    delete safeData.token;
+    delete safeData.accessToken;
+
     const messages = tokens.map((token) => ({
       to: token,
-      title: payload.title,
-      body: payload.body,
-      data: payload.data ?? {},
+      title: isGuaranteed ? payload.title : '',
+      body: isGuaranteed ? payload.body : 'Tienes una nueva notificación',
+      data: safeData,
       badge: payload.badge,
       sound: 'default',
       channelId: 'default',
@@ -133,14 +188,25 @@ export class NotificationService {
         return false;
       }
 
-      const result = await response.json() as { data?: Array<{ status: string; message?: string; id?: string }> };
+      const result = await response.json() as {
+        data?: Array<{
+          status: string;
+          message?: string;
+          id?: string;
+          details?: { error?: string };
+        }>;
+      };
       if (result.data) {
         for (let i = 0; i < result.data.length; i++) {
           const item = result.data[i];
-          if (item.status === 'error' && item.message === 'DeviceNotRegistered') {
-            const failedToken = item.id ?? tokens[i];
+          const errorType = item.details?.error ?? item.message;
+          if (item.status === 'error' && (errorType === 'DeviceNotRegistered' || errorType === 'InvalidCredentials')) {
+            const failedToken = tokens[i];
             if (failedToken) {
-              await supabase.from('push_tokens').delete().eq('token', failedToken);
+              await supabase
+                .from('push_tokens')
+                .update({ active: false, updated_at: new Date().toISOString() })
+                .eq('token', failedToken);
             }
           }
         }
@@ -153,7 +219,14 @@ export class NotificationService {
     }
   }
 
-  async sendReminderNotification(userId: string, taskTitle: string, remindAt: string, data?: Record<string, unknown>) {
+  async sendReminderNotification(
+    userId: string,
+    taskTitle: string,
+    remindAt: string,
+    data?: Record<string, unknown>,
+    options?: PushSendOptions
+  ) {
+    const isGuaranteed = options?.guaranteedRecipient ?? true;
     const notification = await this.createNotification(
       userId,
       'Recordatorio',
@@ -162,11 +235,15 @@ export class NotificationService {
       data
     );
 
-    await this.sendPushNotification(userId, {
-      title: 'Recordatorio',
-      body: taskTitle,
-      data: { ...data, notificationId: notification.id },
-    });
+    await this.sendPushNotification(
+      userId,
+      {
+        title: isGuaranteed ? 'Recordatorio' : '',
+        body: isGuaranteed ? `Recordatorio: ${taskTitle}` : 'Tienes un recordatorio pendiente',
+        data: { ...data, notificationId: notification.id },
+      },
+      { guaranteedRecipient: isGuaranteed }
+    );
 
     return notification;
   }

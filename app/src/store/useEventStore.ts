@@ -28,6 +28,7 @@ interface EventState {
   updateEvent: (id: string, data: Partial<Event>) => Promise<Event>;
   deleteEvent: (id: string) => Promise<void>;
   clearSelectedEvent: () => void;
+  reset: () => void;
 }
 
 export const useEventStore = create<EventState>((set, get) => ({
@@ -105,4 +106,16 @@ export const useEventStore = create<EventState>((set, get) => ({
   },
 
   clearSelectedEvent: () => set({ selectedEvent: null }),
+
+  reset: () =>
+    set({
+      events: [],
+      total: 0,
+      page: 1,
+      filters: {},
+      selectedDate: new Date(),
+      isLoading: false,
+      error: null,
+      selectedEvent: null,
+    }),
 }));

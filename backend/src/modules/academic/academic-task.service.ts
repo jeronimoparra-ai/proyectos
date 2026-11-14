@@ -53,41 +53,23 @@ export class AcademicTaskService {
   async create(userId: string, input: CreateAcademicTaskInput) {
     const { materials, topics, ...taskData } = input;
 
-    const { data, error } = await supabase
-      .from('academic_tasks')
-      .insert({ ...taskData, user_id: userId })
-      .select()
-      .single();
+    // Use atomic RPC function for task + materials + topics creation
+    const { data, error } = await supabase.rpc('create_academic_task_atomic', {
+      p_user_id: userId,
+      p_title: taskData.title,
+      p_subject: taskData.subject ?? null,
+      p_content: taskData.content ?? null,
+      p_materials: materials ?? [],
+      p_topics: topics ?? [],
+    });
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
-    if (materials && materials.length > 0) {
-      const materialInserts = materials.map((m) => ({
-        academic_task_id: data.id,
-        ...m,
-      }));
-
-      const { error: matError } = await supabase
-        .from('study_materials')
-        .insert(materialInserts);
-
-      if (matError) throw createAppError(matError.message, 500, 'DB_ERROR');
+    if (!data || data.length === 0) {
+      throw createAppError('Failed to create academic task', 500, 'DB_ERROR');
     }
 
-    if (topics && topics.length > 0) {
-      const topicInserts = topics.map((t) => ({
-        academic_task_id: data.id,
-        ...t,
-      }));
-
-      const { error: topicError } = await supabase
-        .from('topics')
-        .insert(topicInserts);
-
-      if (topicError) throw createAppError(topicError.message, 500, 'DB_ERROR');
-    }
-
-    return data;
+    return data[0];
   }
 
   async update(userId: string, taskId: string, input: UpdateAcademicTaskInput) {
