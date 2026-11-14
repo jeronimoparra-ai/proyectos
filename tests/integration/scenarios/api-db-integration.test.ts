@@ -1,88 +1,99 @@
 /**
- * Plantilla base: Test de integración API/DB
- * NO IMPLEMENTAR - Esta es una plantilla para que los equipos T1-T5 la extiendan
- *
- * Objetivo: Verificar que la API interactúa correctamente con la base de datos
- * (CRUD, transacciones, constraints, triggers).
+ * Integración API/DB a nivel de contrato SQL/RPC (capa que usa la API).
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { apiClient } from '../helpers/api-client';
-import { createAuthenticatedTestUser, clearApiClientAuth } from '../helpers/auth';
-import { closeTestPool, truncateAllTables } from '../helpers/db';
+import { closeTestPool, getTestPool, grantRoleMembership } from '../helpers/db';
+import { insertAuthUser, prepareCleanDatabase } from '../helpers/bootstrap';
 
-describe('API/DB Integration - Plantilla Base', () => {
-  let user: Awaited<ReturnType<typeof createAuthenticatedTestUser>>;
+describe('API/DB Integration (SQL contract)', () => {
+  const pool = getTestPool();
+  let userId = '';
 
   beforeAll(async () => {
-    // Levantar infraestructura
-    user = await createAuthenticatedTestUser();
-    apiClient.setAuthTokens(user.tokens!);
-  });
+    const client = await pool.connect();
+    try {
+      await prepareCleanDatabase(client);
+      await grantRoleMembership(client);
+      userId = await insertAuthUser(client, 'api-db@example.com');
+    } finally {
+      client.release();
+    }
+  }, 120_000);
 
   afterAll(async () => {
-    clearApiClientAuth();
     await closeTestPool();
   });
 
-  it('CRUD Tasks: crear, leer, actualizar, eliminar', async () => {
-    // TODO T1-T5: Implementar
-    // 1. POST /api/tasks -> 201, devuelve task con id
-    // 2. GET /api/tasks -> lista incluye task creada
-    // 3. PATCH /api/tasks/:id -> actualiza campos
-    // 4. GET /api/tasks/:id -> verifica cambios
-    // 5. DELETE /api/tasks/:id -> 204
-    // 6. GET /api/tasks -> task no aparece
-    expect(true).toBe(true);
+  it('CRUD tasks: insert/select/update/soft-delete', async () => {
+    const created = await pool.query<{ id: string }>(
+      `INSERT INTO tasks (user_id, title, status) VALUES ($1, 'CRUD', 'pending') RETURNING id`,
+      [userId]
+    );
+    const id = created.rows[0].id;
+
+    const listed = await pool.query(`SELECT id FROM tasks WHERE user_id = $1 AND deleted_at IS NULL`, [
+      userId,
+    ]);
+    expect(listed.rowCount).toBeGreaterThanOrEqual(1);
+
+    await pool.query(`UPDATE tasks SET title = 'CRUD-updated' WHERE id = $1`, [id]);
+    const updated = await pool.query<{ title: string; updated_at: Date; created_at: Date }>(
+      `SELECT title, updated_at, created_at FROM tasks WHERE id = $1`,
+      [id]
+    );
+    expect(updated.rows[0].title).toBe('CRUD-updated');
+    expect(updated.rows[0].updated_at.getTime()).toBeGreaterThanOrEqual(
+      updated.rows[0].created_at.getTime()
+    );
+
+    await pool.query(`UPDATE tasks SET deleted_at = now() WHERE id = $1`, [id]);
+    const soft = await pool.query(`SELECT id FROM tasks WHERE id = $1 AND deleted_at IS NULL`, [id]);
+    expect(soft.rowCount).toBe(0);
   });
 
-  it('CRUD Events: crear, leer, actualizar, eliminar', async () => {
-    // TODO T1-T5: Implementar
-    expect(true).toBe(true);
+  it('RPC create_academic_task_atomic crea task + materials + topics', async () => {
+    const { rows } = await pool.query<{ task_id: string }>(
+      `SELECT task_id FROM create_academic_task_atomic(
+         $1, 'Atomic Task', 'Math', 'Body',
+         '[{"type":"text","content":"notes"}]'::jsonb,
+         '[{"name":"Algebra","description":"ch1"}]'::jsonb
+       )`,
+      [userId]
+    );
+    const taskId = rows[0].task_id;
+    const mats = await pool.query(`SELECT id FROM study_materials WHERE academic_task_id = $1`, [
+      taskId,
+    ]);
+    const topics = await pool.query(`SELECT id FROM topics WHERE academic_task_id = $1`, [taskId]);
+    expect(mats.rowCount).toBe(1);
+    expect(topics.rowCount).toBe(1);
   });
 
-  it('CRUD Academic Tasks: crear, leer, actualizar, eliminar', async () => {
-    // TODO T1-T5: Implementar
-    expect(true).toBe(true);
+  it('CHECK constraints rechazan status/priority inválidos', async () => {
+    await expect(
+      pool.query(`INSERT INTO tasks (user_id, title, status) VALUES ($1, 'bad', 'nope')`, [userId])
+    ).rejects.toThrow(/check/i);
+    await expect(
+      pool.query(
+        `INSERT INTO tasks (user_id, title, priority) VALUES ($1, 'bad', 'extreme')`,
+        [userId]
+      )
+    ).rejects.toThrow(/check/i);
   });
 
-  it('Transacciones: rollback en error preserva consistencia', async () => {
-    // TODO T1-T5: Implementar
-    // Operación que falle a mitad (ej. crear task + subtask, falla subtask)
-    // Verificar que task no se crea
-    expect(true).toBe(true);
-  });
-
-  it('Constraints: FK violaión rechaza operación', async () => {
-    // TODO T1-T5: Implementar
-    // Intentar crear task con category_id inexistente -> 400/409
-    expect(true).toBe(true);
-  });
-
-  it('Constraints: CHECK constraints validan datos', async () => {
-    // TODO T1-T5: Implementar
-    // Intentar crear task con status inválido -> 400
-    // Intentar crear review con quality > 5 -> 400
-    expect(true).toBe(true);
-  });
-
-  it('Triggers: updated_at se actualiza en UPDATE', async () => {
-    // TODO T1-T5: Implementar
-    // Crear task, esperar, actualizar, verificar updated_at cambió
-    expect(true).toBe(true);
-  });
-
-  it('Soft delete: deleted_at oculta registros en GET', async () => {
-    // TODO T1-T5: Implementar
-    // DELETE task -> GET no la muestra, pero existe en BD con deleted_at
-    expect(true).toBe(true);
-  });
-
-  it('Paginación: page/limit funcionan correctamente', async () => {
-    // TODO T1-T5: Implementar
-    // Crear 25 tasks, page=1 limit=10 -> 10 items
-    // page=2 limit=10 -> 10 items
-    // page=3 limit=10 -> 5 items
-    expect(true).toBe(true);
+  it('FK reminder ownership (004) bloquea task_id de otro usuario', async () => {
+    const other = await insertAuthUser(pool, 'api-db-other@example.com');
+    const otherTask = await pool.query<{ id: string }>(
+      `INSERT INTO tasks (user_id, title) VALUES ($1, 'Other') RETURNING id`,
+      [other]
+    );
+    await expect(
+      pool.query(
+        `INSERT INTO reminders (user_id, task_id, remind_at, type)
+         VALUES ($1, $2, now() + interval '1 hour', 'notification')`,
+        [userId, otherTask.rows[0].id]
+      )
+    ).rejects.toThrow();
   });
 });

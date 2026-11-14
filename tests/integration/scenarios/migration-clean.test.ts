@@ -1,51 +1,88 @@
 /**
- * Plantilla base: Test de migración limpia (clean migration)
- * NO IMPLEMENTAR - Esta es una plantilla para que los equipos T1-T5 la extiendan
- *
- * Objetivo: Verificar que las migraciones de base de datos se aplican correctamente
- * desde cero en una base de datos vacía.
+ * Migración limpia: 001-007 sobre Postgres desechable vacío.
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { getTestPool, truncateAllTables, closeTestPool } from '../helpers/db';
+import { closeTestPool, getTestPool, grantRoleMembership } from '../helpers/db';
+import { MIGRATION_FILES, prepareCleanDatabase } from '../helpers/bootstrap';
 
-describe('Migration Clean - Plantilla Base', () => {
+describe('Migration Clean', () => {
+  const pool = getTestPool();
+
   beforeAll(async () => {
-    // Levantar infraestructura con docker-compose antes de ejecutar
-    // docker-compose -f tests/integration/docker-compose.yml up -d
-    // Esperar a que postgres esté healthy
-  });
+    const client = await pool.connect();
+    try {
+      await prepareCleanDatabase(client);
+      await grantRoleMembership(client);
+    } finally {
+      client.release();
+    }
+  }, 120_000);
 
   afterAll(async () => {
     await closeTestPool();
-    // docker-compose -f tests/integration/docker-compose.yml down
   });
 
-  it('debe aplicar todas las migraciones sin errores en BD vacía', async () => {
-    // TODO T1-T5: Implementar
-    // 1. Conectar a BD vacía
-    // 2. Ejecutar migraciones (001_initial_schema.sql, 002_push_tokens.sql, 003_study_sessions.sql)
-    // 3. Verificar que todas las tablas existen
-    // 4. Verificar índices, constraints, RLS policies
-    // 5. Verificar triggers de updated_at
-    expect(true).toBe(true); // Placeholder
+  it('aplica las 7 migraciones sin error en BD vacía', () => {
+    expect(MIGRATION_FILES).toHaveLength(7);
   });
 
-  it('debe crear tablas con schema correcto', async () => {
-    // TODO T1-T5: Implementar
-    // Verificar columnas, tipos, constraints por tabla
-    expect(true).toBe(true);
+  it('crea tablas core esperadas', async () => {
+    const { rows } = await pool.query<{ tablename: string }>(
+      `SELECT tablename FROM pg_tables
+       WHERE schemaname = 'public'
+         AND tablename = ANY($1::text[])
+       ORDER BY tablename`,
+      [[
+        'tasks',
+        'events',
+        'reminders',
+        'academic_tasks',
+        'reviews',
+        'push_tokens',
+        'study_sessions',
+        'calendar_integrations',
+        'calendar_oauth_states',
+      ]]
+    );
+    expect(rows.map((r) => r.tablename)).toEqual([
+      'academic_tasks',
+      'calendar_integrations',
+      'calendar_oauth_states',
+      'events',
+      'push_tokens',
+      'reminders',
+      'reviews',
+      'study_sessions',
+      'tasks',
+    ]);
   });
 
-  it('debe habilitar RLS en todas las tablas de usuario', async () => {
-    // TODO T1-T5: Implementar
-    // Verificar que ALTER TABLE ... ENABLE ROW LEVEL SECURITY se aplicó
-    expect(true).toBe(true);
+  it('habilita RLS en tablas de usuario', async () => {
+    const { rows } = await pool.query<{ relname: string; relrowsecurity: boolean }>(
+      `SELECT c.relname, c.relrowsecurity
+       FROM pg_class c
+       JOIN pg_namespace n ON n.oid = c.relnamespace
+       WHERE n.nspname = 'public'
+         AND c.relname = ANY($1::text[])`,
+      [['tasks', 'push_tokens', 'study_sessions', 'academic_tasks', 'reviews']]
+    );
+    expect(rows.length).toBeGreaterThanOrEqual(5);
+    expect(rows.every((r) => r.relrowsecurity)).toBe(true);
   });
 
-  it('debe crear policies de aislamiento por user_id', async () => {
-    // TODO T1-T5: Implementar
-    // Verificar policies SELECT/INSERT/UPDATE/DELETE con auth.uid() = user_id
-    expect(true).toBe(true);
+  it('expone RPCs de integridad (review + claim reminders)', async () => {
+    const { rows } = await pool.query<{ proname: string }>(
+      `SELECT proname FROM pg_proc
+       WHERE pronamespace = 'public'::regnamespace
+         AND proname = ANY($1::text[])
+       ORDER BY proname`,
+      [['claim_due_reminders', 'create_academic_task_atomic', 'record_review_atomic']]
+    );
+    expect(rows.map((r) => r.proname)).toEqual([
+      'claim_due_reminders',
+      'create_academic_task_atomic',
+      'record_review_atomic',
+    ]);
   });
 });

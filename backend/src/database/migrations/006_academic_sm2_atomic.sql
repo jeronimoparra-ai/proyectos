@@ -104,7 +104,7 @@ RETURNS TABLE (
     difficulty REAL,
     time_spent_seconds INTEGER,
     ease_factor REAL,
-    interval INTEGER,
+    "interval" INTEGER,
     repetitions INTEGER,
     next_review_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ,

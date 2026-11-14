@@ -1,76 +1,121 @@
 /**
- * Plantilla base: Test de aislamiento entre cuentas (account isolation)
- * NO IMPLEMENTAR - Esta es una plantilla para que los equipos T1-T5 la extiendan
- *
- * Objetivo: Verificar que los datos de un usuario no son accesibles por otro usuario
- * a través de la API, base de datos, o cualquier otro vector.
+ * Aislamiento entre cuentas vía RLS (auth.uid) sobre Postgres desechable.
+ * Module: asUser + policies on tasks/academic_tasks/push_tokens.
+ * Existing: stub account-isolation.test.ts; unit calendar RLS in google-calendar.service.test.ts.
+ * Instruction: AISLAMIENTO entre cuentas (RLS/API).
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { createAuthenticatedTestUser, verifyAccountIsolation, clearApiClientAuth } from '../helpers/auth';
-import { closeTestPool } from '../helpers/db';
+import { closeTestPool, getTestPool, grantRoleMembership } from '../helpers/db';
+import { asUser, insertAuthUser, prepareCleanDatabase } from '../helpers/bootstrap';
 
-describe('Account Isolation - Plantilla Base', () => {
-  let userA: Awaited<ReturnType<typeof createAuthenticatedTestUser>>;
-  let userB: Awaited<ReturnType<typeof createAuthenticatedTestUser>>;
+describe('Account Isolation (RLS)', () => {
+  const pool = getTestPool();
+  let userA = '';
+  let userB = '';
+  let taskA = '';
+  let academicA = '';
 
   beforeAll(async () => {
-    // Levantar infraestructura
-    userA = await createAuthenticatedTestUser({ displayName: 'User A' });
-    userB = await createAuthenticatedTestUser({ displayName: 'User B' });
-  });
+    const client = await pool.connect();
+    try {
+      await prepareCleanDatabase(client);
+      await grantRoleMembership(client);
+      userA = await insertAuthUser(client, 'iso-a@example.com');
+      userB = await insertAuthUser(client, 'iso-b@example.com');
+
+      const t = await client.query<{ id: string }>(
+        `INSERT INTO tasks (user_id, title) VALUES ($1, 'Task A') RETURNING id`,
+        [userA]
+      );
+      taskA = t.rows[0].id;
+
+      const a = await client.query<{ id: string }>(
+        `INSERT INTO academic_tasks (user_id, title) VALUES ($1, 'Academic A') RETURNING id`,
+        [userA]
+      );
+      academicA = a.rows[0].id;
+    } finally {
+      client.release();
+    }
+  }, 120_000);
 
   afterAll(async () => {
-    clearApiClientAuth();
     await closeTestPool();
   });
 
-  it('Usuario A no puede leer tareas de Usuario B', async () => {
-    // TODO T1-T5: Implementar
-    // 1. Usuario A crea tarea
-    // 2. Usuario B intenta GET /api/tasks con auth de A
-    // 3. Verificar 403/404 o lista vacía
-    const result = await verifyAccountIsolation(userA, userB, async (client) => {
-      return client.getTasks();
-    });
-    expect(result.isolated).toBe(true);
+  it('Usuario B no lee tareas de Usuario A', async () => {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await asUser(client, userB);
+      const { rows } = await client.query(`SELECT id FROM tasks WHERE id = $1`, [taskA]);
+      expect(rows).toHaveLength(0);
+      await client.query('ROLLBACK');
+    } finally {
+      client.release();
+    }
   });
 
-  it('Usuario A no puede crear tareas para Usuario B', async () => {
-    // TODO T1-T5: Implementar
-    // 1. Usuario A intenta POST /api/tasks con user_id de B en body
-    // 2. Verificar rechazo
-    expect(true).toBe(true);
+  it('Usuario A sí lee sus propias tareas', async () => {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await asUser(client, userA);
+      const { rows } = await client.query(`SELECT id FROM tasks WHERE id = $1`, [taskA]);
+      expect(rows).toHaveLength(1);
+      await client.query('ROLLBACK');
+    } finally {
+      client.release();
+    }
   });
 
-  it('Usuario A no puede actualizar tareas de Usuario B', async () => {
-    // TODO T1-T5: Implementar
-    expect(true).toBe(true);
+  it('Usuario B no puede insertar tarea con user_id de A', async () => {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await asUser(client, userB);
+      await expect(
+        client.query(`INSERT INTO tasks (user_id, title) VALUES ($1, 'spoof')`, [userA])
+      ).rejects.toThrow();
+      await client.query('ROLLBACK');
+    } finally {
+      client.release();
+    }
   });
 
-  it('Usuario A no puede eliminar tareas de Usuario B', async () => {
-    // TODO T1-T5: Implementar
-    expect(true).toBe(true);
+  it('Usuario B no lee academic_tasks de A', async () => {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await asUser(client, userB);
+      const { rows } = await client.query(`SELECT id FROM academic_tasks WHERE id = $1`, [
+        academicA,
+      ]);
+      expect(rows).toHaveLength(0);
+      await client.query('ROLLBACK');
+    } finally {
+      client.release();
+    }
   });
 
-  it('Usuario A no puede leer eventos de Usuario B', async () => {
-    // TODO T1-T5: Implementar
-    expect(true).toBe(true);
-  });
-
-  it('Usuario A no puede leer tareas académicas de Usuario B', async () => {
-    // TODO T1-T5: Implementar
-    expect(true).toBe(true);
-  });
-
-  it('Usuario A no puede leer reviews de Usuario B', async () => {
-    // TODO T1-T5: Implementar
-    expect(true).toBe(true);
-  });
-
-  it('Aislamiento a nivel de BD: RLS policies funcionan', async () => {
-    // TODO T1-T5: Implementar
-    // Verificar directamente en BD que policies auth.uid() = user_id funcionan
-    expect(true).toBe(true);
+  it('Usuario B no lee push_tokens de A', async () => {
+    await pool.query(
+      `INSERT INTO push_tokens (user_id, token, platform) VALUES ($1, $2, 'android')
+       ON CONFLICT (token) DO NOTHING`,
+      [userA, `ExponentPushToken[iso-a-${Date.now()}]`]
+    );
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await asUser(client, userB);
+      const { rows } = await client.query(`SELECT id FROM push_tokens WHERE user_id = $1`, [
+        userA,
+      ]);
+      expect(rows).toHaveLength(0);
+      await client.query('ROLLBACK');
+    } finally {
+      client.release();
+    }
   });
 });

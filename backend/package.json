@@ -10,7 +10,8 @@
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:integration": "vitest run --config ../tests/integration/vitest.config.mts"
   },
   "keywords": [],
   "author": "",
@@ -31,10 +32,12 @@
     "@types/express": "^5.0.6",
     "@types/morgan": "^1.9.10",
     "@types/node": "^26.5.1",
+    "@types/pg": "^8.23.1",
     "@typescript-eslint/eslint-plugin": "^8.70.0",
     "@typescript-eslint/parser": "^8.70.0",
     "eslint": "^10.10.0",
     "nodemon": "^3.1.14",
+    "pg": "^8.23.1",
     "ts-node": "^10.9.2",
     "tsx": "^4.23.13",
     "typescript": "5.7",

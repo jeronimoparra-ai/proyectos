@@ -1,9 +1,9 @@
 /**
- * Helpers de base de datos para tests de integración
- * Proporciona utilidades para configurar y limpiar estado de BD entre tests
+ * Helpers de base de datos para tests de integración.
+ * Pool pg + utilidades de truncado/usuarios para escenarios T6b.
  */
 
-import { Pool, PoolClient, QueryResult } from 'pg';
+import { Pool, type PoolClient, type QueryResult } from 'pg';
 
 export interface TestDatabaseConfig {
   host: string;
@@ -15,7 +15,7 @@ export interface TestDatabaseConfig {
 
 export const defaultTestDbConfig: TestDatabaseConfig = {
   host: process.env.TEST_DB_HOST ?? 'localhost',
-  port: parseInt(process.env.TEST_DB_PORT ?? '5432', 10),
+  port: parseInt(process.env.TEST_DB_PORT ?? '5433', 10),
   database: process.env.TEST_DB_NAME ?? 'productivity_test',
   user: process.env.TEST_DB_USER ?? 'test_user',
   password: process.env.TEST_DB_PASSWORD ?? 'test_password',
@@ -23,9 +23,6 @@ export const defaultTestDbConfig: TestDatabaseConfig = {
 
 let pool: Pool | null = null;
 
-/**
- * Obtiene o crea el pool de conexiones para tests
- */
 export function getTestPool(config: TestDatabaseConfig = defaultTestDbConfig): Pool {
   if (!pool) {
     pool = new Pool({
@@ -35,40 +32,30 @@ export function getTestPool(config: TestDatabaseConfig = defaultTestDbConfig): P
       user: config.user,
       password: config.password,
       max: 10,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 5000,
+      idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 10_000,
     });
-
     pool.on('error', (err) => {
-      console.error('[Test DB] Unexpected error on idle client', err);
+      console.error('[Test DB] Unexpected error on idle client', err.message);
     });
   }
   return pool;
 }
 
-/**
- * Ejecuta una query en la base de datos de test
- */
-export async function query<T = unknown>(
+export async function query<T extends Record<string, unknown> = Record<string, unknown>>(
   text: string,
   params?: unknown[],
   config?: TestDatabaseConfig
 ): Promise<QueryResult<T>> {
-  const client = getTestPool(config);
-  return client.query<T>(text, params);
+  return getTestPool(config).query<T>(text, params);
 }
 
-/**
- * Obtiene un cliente para transacciones
- */
-export async function getTestClient(config: TestDatabaseConfig = defaultTestDbConfig): Promise<PoolClient> {
-  const client = getTestPool(config);
-  return client.connect();
+export async function getTestClient(
+  config: TestDatabaseConfig = defaultTestDbConfig
+): Promise<PoolClient> {
+  return getTestPool(config).connect();
 }
 
-/**
- * Ejecuta una transacción con rollback automático (útil para tests)
- */
 export async function withTransaction<T>(
   callback: (client: PoolClient) => Promise<T>,
   config: TestDatabaseConfig = defaultTestDbConfig
@@ -77,21 +64,20 @@ export async function withTransaction<T>(
   try {
     await client.query('BEGIN');
     const result = await callback(client);
-    await client.query('ROLLBACK'); // Siempre rollback en tests para aislamiento
+    await client.query('ROLLBACK');
     return result;
   } finally {
     client.release();
   }
 }
 
-/**
- * Limpia todas las tablas de datos de test (mantiene schema)
- * Útil en setup/teardown de suites de tests
- */
-export async function truncateAllTables(config: TestDatabaseConfig = defaultTestDbConfig): Promise<void> {
+export async function truncateAllTables(
+  config: TestDatabaseConfig = defaultTestDbConfig
+): Promise<void> {
   const tables = [
     'study_sessions',
     'push_tokens',
+    'calendar_oauth_states',
     'calendar_integrations',
     'ai_interactions',
     'notifications',
@@ -113,7 +99,7 @@ export async function truncateAllTables(config: TestDatabaseConfig = defaultTest
   try {
     await client.query('BEGIN');
     for (const table of tables) {
-      await client.query(`TRUNCATE TABLE ${table} RESTART IDENTITY CASCADE`);
+      await client.query(`TRUNCATE TABLE IF EXISTS ${table} RESTART IDENTITY CASCADE`);
     }
     await client.query('COMMIT');
   } catch (error) {
@@ -124,16 +110,13 @@ export async function truncateAllTables(config: TestDatabaseConfig = defaultTest
   }
 }
 
-/**
- * Inserta un usuario de prueba y devuelve su ID
- */
 export async function createTestUser(
   email: string = `test-${Date.now()}@example.com`,
   config: TestDatabaseConfig = defaultTestDbConfig
 ): Promise<string> {
   const result = await query<{ id: string }>(
     `INSERT INTO auth.users (email, encrypted_password, email_confirmed_at, created_at, updated_at)
-     VALUES ($1, '$2a$10$dummyhash', NOW(), NOW(), NOW())
+     VALUES ($1, 'test-hash', NOW(), NOW(), NOW())
      RETURNING id`,
     [email],
     config
@@ -141,9 +124,6 @@ export async function createTestUser(
   return result.rows[0].id;
 }
 
-/**
- * Inserta una tarea académica de prueba
- */
 export async function createTestAcademicTask(
   userId: string,
   overrides: Partial<{
@@ -170,9 +150,6 @@ export async function createTestAcademicTask(
   return result.rows[0].id;
 }
 
-/**
- * Inserta una review de prueba
- */
 export async function createTestReview(
   userId: string,
   academicTaskId: string,
@@ -199,12 +176,18 @@ export async function createTestReview(
   return result.rows[0].id;
 }
 
-/**
- * Cierra el pool de conexiones (llamar en teardown global)
- */
 export async function closeTestPool(): Promise<void> {
   if (pool) {
     await pool.end();
     pool = null;
   }
+}
+
+/** Concede membership para SET ROLE authenticated/service_role desde el usuario de test. */
+export async function grantRoleMembership(client: PoolClient | Pool): Promise<void> {
+  const who = await client.query<{ current_user: string }>('SELECT current_user');
+  const user = who.rows[0].current_user;
+  await client.query(`GRANT authenticated TO "${user}"`);
+  await client.query(`GRANT service_role TO "${user}"`);
+  await client.query(`GRANT anon TO "${user}"`);
 }

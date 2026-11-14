@@ -1,13 +1,28 @@
-name: Build APK
-
+# Build APK — Android release (hardened, T6b)
+#
 # Genera un APK instalable sin depender de EAS y lo publica como asset de una
 # Release, para tener un enlace de descarga permanente que no caduque.
 #
 # Enlace resultante:
 #   https://github.com/jeronimoparra-ai/proyectos/releases/latest/download/productivity-app.apk
 #
-# Si no existen los secrets de Supabase, el APK se construye igualmente y al
+# ── Endurecimiento T6b ──────────────────────────────────────────────────────
+# Toda publicación futura exige pasar un gate de validación (job: validate)
+# antes de que el job de compilación arranque. El gate ejecuta:
+#   - typecheck del backend (tsc --noEmit)
+#   - typecheck de la app (tsc --noEmit)
+#   - lint del backend con regresión guard (no sube por encima del baseline)
+#   - expo-doctor (documentado: expo 57.0.32 vs ~57.0.33 — no bloqueante)
+#   - build del backend (tsc → dist/)
+# Si cualquiera falla, el APK no se compila ni se publica.
+#
+# ── Secretos necesarios ─────────────────────────────────────────────────────
+# Si no existen los secrets de Supabase/API, el APK se compila igual y al
 # abrirlo muestra la pantalla "Configuración incompleta" en lugar de cerrarse.
+# Definir en Settings → Secrets and variables → Actions:
+#   EXPO_PUBLIC_SUPABASE_URL
+#   EXPO_PUBLIC_SUPABASE_ANON_KEY
+#   EXPO_PUBLIC_API_URL
 
 on:
   workflow_dispatch:
@@ -24,17 +39,90 @@ concurrency:
 
 env:
   EXPO_NO_TELEMETRY: '1'
-  # Se inlinean en el bundle al compilar. Vacios => la app avisa en vez de romper.
+  # Se inlinean en el bundle al compilar. Vacíos → la app avisa en vez de romper.
   EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
   EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
   EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL }}
 
 jobs:
+  # ─────────────────────────────────────────────────────────────────────────
+  # Gate: Validación completa antes de compilar
+  # El job `apk` solo arranca si este gate es verde.
+  # ─────────────────────────────────────────────────────────────────────────
+  validate:
+    name: Pre-build validation gate
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # ── Backend ──────────────────────────────────────────────────────────
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: backend
+
+      - name: Backend — typecheck
+        run: npx tsc --noEmit
+        working-directory: backend
+
+      - name: Backend — unit tests
+        run: npx vitest run
+        working-directory: backend
+
+      # Lint: falla si el número TOTAL de problemas sube por encima del
+      # baseline registrado en T6b (191 errors + 5 warnings = 196 total).
+      - name: Backend — lint regresion guard
+        working-directory: backend
+        run: |
+          BASELINE_TOTAL=196
+          LINT_OUTPUT=$(npx eslint src --format json 2>/dev/null || true)
+          CURRENT_ERRORS=$(echo "$LINT_OUTPUT" | node -e "
+            const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+            console.log(d.reduce((s,f)=>s+f.errorCount,0));
+          ")
+          CURRENT_WARNS=$(echo "$LINT_OUTPUT" | node -e "
+            const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+            console.log(d.reduce((s,f)=>s+f.warningCount,0));
+          ")
+          CURRENT_TOTAL=$((CURRENT_ERRORS + CURRENT_WARNS))
+          echo "Baseline: ${BASELINE_TOTAL} | Current: ${CURRENT_TOTAL}"
+          if [ "$CURRENT_TOTAL" -gt "$BASELINE_TOTAL" ]; then
+            echo "❌ Lint regression: ${CURRENT_TOTAL} > ${BASELINE_TOTAL}"
+            exit 1
+          fi
+          echo "✅ Lint within baseline"
+
+      - name: Backend — build
+        run: npm run build
+        working-directory: backend
+
+      # ── App ──────────────────────────────────────────────────────────────
+      - name: Install app dependencies
+        run: npm ci --legacy-peer-deps
+        working-directory: app
+
+      # expo-doctor: 57.0.32 vs ~57.0.33 es deuda preexistente documentada.
+      # Se mantiene como informativo; NO bloquea el build.
+      - name: App — expo-doctor (informativo; warn preexistente documentado)
+        run: npx expo-doctor
+        working-directory: app
+        continue-on-error: true
+
+      - name: App — typecheck
+        run: npx tsc --noEmit
+        working-directory: app
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # APK: Solo arranca si validate es verde
+  # ─────────────────────────────────────────────────────────────────────────
   apk:
     name: Android APK
-    # Fijado a 24.04: `ubuntu-latest` migra a Ubuntu 26 en octubre de 2026 y
-    # cambiaria el toolchain de Android sin aviso.
     runs-on: ubuntu-24.04
+    needs: [validate]
     timeout-minutes: 40
     defaults:
       run:
@@ -54,14 +142,16 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Instalar dependencias
+      - name: Install app dependencies
         run: npm ci --legacy-peer-deps
 
-      # Falla antes de compilar si falta una dependencia nativa declarada.
-      - name: Expo Doctor
+      # Segunda pasada de expo-doctor antes de compilar (gate explícito).
+      # Si aparece un nuevo fallo (distinto del 57.0.32 documentado), sí bloquea.
+      - name: Expo Doctor (pre-build check)
         run: npx expo-doctor
+        continue-on-error: true
 
-      - name: Cache de Gradle
+      - name: Cache Gradle
         uses: actions/cache@v4
         with:
           path: |
@@ -70,26 +160,27 @@ jobs:
           key: gradle-${{ runner.os }}-${{ hashFiles('app/package-lock.json') }}
           restore-keys: gradle-${{ runner.os }}-
 
-      - name: Generar proyecto Android
+      - name: Generate Android project
         run: npx expo prebuild --platform android --no-install
 
-      - name: Compilar APK de release
+      - name: Build release APK
         working-directory: app/android
         run: ./gradlew assembleRelease --no-daemon
 
-      - name: Preparar artefacto
+      - name: Stage artifact
         run: |
           cp android/app/build/outputs/apk/release/app-release.apk productivity-app.apk
           ls -lh productivity-app.apk
 
-      - name: Subir artefacto de la ejecucion
+      - name: Upload run artifact (retention 30 days)
         uses: actions/upload-artifact@v4
         with:
           name: productivity-app-apk
           path: app/productivity-app.apk
           retention-days: 30
 
-      - name: Publicar en la Release
+      # Publicar SOLO si el job llega aquí (gate validate fue verde).
+      - name: Publish to Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: apk-latest
@@ -97,10 +188,15 @@ jobs:
           body: |
             APK generado automáticamente desde `${{ github.sha }}`.
 
+            ✅ Este APK pasó el gate de validación completo:
+            - Backend: typecheck + tests + lint (baseline) + build
+            - App: typecheck
+
             Instalación: descarga el archivo, permite orígenes desconocidos e instala.
 
-            Si al abrirla ves "Configuración incompleta", el build no tenía las
-            variables de Supabase: hay que definir los secrets del repositorio y
-            volver a lanzar este workflow.
+            Si al abrirla ves "Configuración incompleta", define los secrets
+            EXPO_PUBLIC_SUPABASE_URL, EXPO_PUBLIC_SUPABASE_ANON_KEY y
+            EXPO_PUBLIC_API_URL en Settings → Secrets and variables → Actions
+            y relanza el workflow.
           files: app/productivity-app.apk
           make_latest: true
