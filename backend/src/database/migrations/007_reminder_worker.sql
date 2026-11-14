@@ -74,3 +74,10 @@ AS $$
     (SELECT t.title FROM tasks t WHERE t.id = c.task_id) AS task_title,
     (SELECT t.priority FROM tasks t WHERE t.id = c.task_id) AS task_priority;
 $$;
+
+-- Permiso mínimo para ejecutar el procedimiento de reserva atómica:
+-- solo service_role (cliente interno del reminder-checker, vía
+-- createReminderCheckerClient). Anon/authenticated no pueden ejecutar.
+REVOKE ALL ON FUNCTION public.claim_due_reminders(TEXT, INT, INT) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.claim_due_reminders(TEXT, INT, INT) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.claim_due_reminders(TEXT, INT, INT) TO service_role;

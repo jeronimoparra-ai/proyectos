@@ -1,5 +1,16 @@
-import { supabase } from '../../database/supabase';
+import { createReminderCheckerClient, runWithSystemUser } from '../../database/supabase';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { notificationService } from '../notifications/notification.service';
+
+// Solo el worker interno puede usar este cliente con service_role (sin contexto de petición).
+// Lazy: se crea en el arranque del worker, nunca al importar el módulo.
+let checkerClient: SupabaseClient | null = null;
+function getCheckerClient(): SupabaseClient {
+  if (!checkerClient) {
+    checkerClient = createReminderCheckerClient();
+  }
+  return checkerClient;
+}
 
 // ---------------------------------------------------------------------------
 // Configuración del trabajador de recordatorios (todo por variable de
@@ -125,7 +136,7 @@ async function runBatch(): Promise<void> {
  * no puede haber una reserva simultánea por dos trabajadores.
  */
 async function claimDueReminders(): Promise<ClaimedReminder[]> {
-  const { data, error } = await supabase.rpc('claim_due_reminders', {
+  const { data, error } = await getCheckerClient().rpc('claim_due_reminders', {
     p_locked_by: WORKER_ID,
     p_limit: BATCH_SIZE,
     p_claim_ttl: CLAIM_TTL_SECONDS,
@@ -147,13 +158,15 @@ async function processReminder(reminder: ClaimedReminder): Promise<void> {
 
   try {
     // 1) CREACIÓN del aviso interno: se inscribe la nota en la base de
-    //    datos antes de llamar a Expo. El marcador `sent_at` (persistente)
-    //    garantiza que un mismo recordatorio no genera más de un aviso.
-    const result = await notificationService.sendReminderNotification(
-      reminder.user_id,
-      taskTitle,
-      reminder.remind_at,
-      data
+    //    datos antes de llamar a Expo. El trabajo interno va acotado al
+    //    destinatario (runWithSystemUser); nunca a un service_role abierto.
+    const result = await runWithSystemUser(reminder.user_id, () =>
+      notificationService.sendReminderNotification(
+        reminder.user_id,
+        taskTitle,
+        reminder.remind_at,
+        data
+      )
     );
 
     // 2) Si la entrega se registró sobre el aviso, marcar el recordatorio
@@ -176,14 +189,14 @@ async function processReminder(reminder: ClaimedReminder): Promise<void> {
 }
 
 async function markReminderSent(reminderId: string): Promise<void> {
-  await supabase
+  await getCheckerClient()
     .from('reminders')
     .update({ is_sent: true, sent_at: new Date().toISOString() })
     .eq('id', reminderId);
 }
 
 async function scheduleRetry(reminderId: string, error: unknown): Promise<void> {
-  const { data, error: qErr } = await supabase
+  const { data, error: qErr } = await getCheckerClient()
     .from('reminders')
     .select('retry_count')
     .eq('id', reminderId)
@@ -203,7 +216,7 @@ async function scheduleRetry(reminderId: string, error: unknown): Promise<void> 
     RETRY_MAX_DELAY_MS,
     RETRY_BASE_DELAY_MS * 2 ** retryCount
   );
-  await supabase
+  await getCheckerClient()
     .from('reminders')
     .update({
       retry_at: new Date(Date.now() + delay).toISOString(),

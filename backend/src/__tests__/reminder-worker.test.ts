@@ -15,6 +15,8 @@ const { rpc, from, updateEq, sendReminderNotification } = vi.hoisted(() => {
 
 vi.mock('../database/supabase', () => ({
   supabase: { rpc, from },
+  createReminderCheckerClient: () => ({ rpc, from }),
+  runWithSystemUser: (_userId: string, cb: () => unknown) => cb(),
 }));
 
 vi.mock('../modules/notifications/notification.service', () => ({
