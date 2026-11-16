@@ -183,12 +183,11 @@ jobs:
           fi
           cd android
           echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > release.keystore
-          cat >> gradle.properties <<EOP
-          RELEASE_STORE_FILE=release.keystore
-          RELEASE_KEY_ALIAS=proyectos
-          RELEASE_STORE_PASSWORD=${RELEASE_KEYSTORE_PASSWORD}
-          RELEASE_KEY_PASSWORD=${RELEASE_KEYSTORE_PASSWORD}
-          EOP
+          # gradle.properties generado por prebuild no acaba en salto de linea:
+          # sin el \n inicial, la ultima propiedad queda concatenada y el
+          # autolinking de Expo recibe JSON corrupto (node exit 1).
+          printf '\nRELEASE_STORE_FILE=release.keystore\nRELEASE_KEY_ALIAS=proyectos\nRELEASE_STORE_PASSWORD=%s\nRELEASE_KEY_PASSWORD=%s\n' \
+            "$RELEASE_KEYSTORE_PASSWORD" "$RELEASE_KEYSTORE_PASSWORD" >> gradle.properties
           python3 - <<'PY'
           path = 'app/build.gradle'
           s = open(path).read()
@@ -210,7 +209,7 @@ jobs:
 
       - name: Build release APK
         working-directory: app/android
-        run: ./gradlew assembleRelease --no-daemon
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
 
       - name: Stage artifact
         run: |

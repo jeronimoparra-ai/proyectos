@@ -1,0 +1,39 @@
+# Despliegue del backend en Render (plan free, Docker).
+# Uso: Render → New → Blueprint → seleccionar este repo.
+# Las variables marcadas con sync: false se piden en el panel y NUNCA van al repo.
+services:
+  - type: web
+    name: productivity-api
+    runtime: docker
+    plan: free
+    region: oregon
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SUPABASE_URL
+        value: https://jfmydwshyvpplsxkrwns.supabase.co
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: BRAVE_SEARCH_API_KEY
+        sync: false
+      - key: EXPO_ACCESS_TOKEN
+        sync: false
+      # Orígenes permitidos: la app nativa no envía Origin, pero el panel web sí.
+      - key: CORS_ORIGIN
+        value: http://localhost:8081
+      - key: FRONTEND_URL
+        value: http://localhost:8081
+      # Se sobrescribe con la URL real del servicio tras el primer deploy
+      # (debe coincidir exactamente con el redirect registrado en Google Cloud).
+      - key: GOOGLE_REDIRECT_URI
+        value: http://localhost:8081/
