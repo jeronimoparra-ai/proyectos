@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { useTheme } from '../../hooks';
 import { supabase } from '../../services/supabase';
+import { AnimatedPressable } from '../../components/AnimatedPressable';
+import { IconCheck } from '../../components/icons';
 
 interface ForgotPasswordScreenProps {
   navigation: any;
@@ -57,18 +59,20 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordScreenProps) 
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.content}>
           <View style={[styles.iconContainer, { backgroundColor: colors.successLight }]}>
-            <Text style={[styles.icon, { color: colors.success }]}>✓</Text>
+            <IconCheck size={32} color={colors.success} accessibilityLabel="Password reset email sent" />
           </View>
           <Text style={[styles.title, { color: colors.text }]}>Check Your Email</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             We've sent a password reset link to {email}
           </Text>
-          <TouchableOpacity
+          <AnimatedPressable
             style={[styles.button, { backgroundColor: colors.primary, borderRadius: borderRadius.md }]}
             onPress={() => navigation.navigate('Login')}
+            accessibilityRole="button"
+            accessibilityLabel="Back to sign in"
           >
             <Text style={styles.buttonText}>Back to Sign In</Text>
-          </TouchableOpacity>
+          </AnimatedPressable>
         </View>
       </View>
     );

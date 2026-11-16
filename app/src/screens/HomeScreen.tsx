@@ -3,14 +3,16 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
   RefreshControl,
-  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../hooks/useTheme';
 import { useReviewStore } from '../store/useReviewStore';
+import { AnimatedPressable } from '../components/AnimatedPressable';
+import { FadeSlideIn } from '../components/FadeSlideIn';
+import { ScreenSkeleton } from '../components/Skeleton';
+import { IconEmptyState, IconChevron } from '../components/icons';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -50,105 +52,117 @@ export function HomeScreen() {
       style={[styles.container, { backgroundColor: colors.background }]}
       refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refreshHome} />}
     >
-      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-        <Text style={[styles.greeting, { color: colors.text }]}>Welcome back!</Text>
-      </View>
+      <FadeSlideIn index={0}>
+        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+          <Text style={[styles.greeting, { color: colors.text }]}>Welcome back!</Text>
+        </View>
+      </FadeSlideIn>
 
       {isLoading && !hasData ? (
-        <View style={styles.loading}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
+        <ScreenSkeleton count={3} />
       ) : null}
 
       {!isLoading && !hasData ? (
-        <View style={styles.empty}>
-          <Text style={[styles.emptyIcon, { color: colors.textTertiary }]}>📋</Text>
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>No hay datos aún</Text>
-          <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-            Desliza hacia abajo para actualizar o añade tareas y eventos para empezar.
-          </Text>
-        </View>
+        <FadeSlideIn index={1}>
+          <View style={styles.empty}>
+            <IconEmptyState size={48} color={colors.primary} accessibilityLabel="No hay datos aún" />
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>No hay datos aún</Text>
+            <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+              Desliza hacia abajo para actualizar o añade tareas y eventos para empezar.
+            </Text>
+          </View>
+        </FadeSlideIn>
       ) : null}
 
       {reviewStats && (
-        <View style={styles.statsRow}>
-          <View style={[styles.statCard, { backgroundColor: colors.surface, borderRadius: borderRadius.lg }]}>
-            <Text style={[styles.statValue, { color: colors.primary }]}>{reviewStats.totalTasks}</Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total Tasks</Text>
+        <FadeSlideIn index={1}>
+          <View style={styles.statsRow}>
+            <View style={[styles.statCard, { backgroundColor: colors.surface, borderRadius: borderRadius.lg }]}>
+              <Text style={[styles.statValue, { color: colors.primary }]}>{reviewStats.totalTasks}</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total Tasks</Text>
+            </View>
+            <View style={[styles.statCard, { backgroundColor: colors.surface, borderRadius: borderRadius.lg }]}>
+              <Text style={[styles.statValue, { color: colors.warning }]}>{reviewStats.dueToday}</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Due Today</Text>
+            </View>
+            <View style={[styles.statCard, { backgroundColor: colors.surface, borderRadius: borderRadius.lg }]}>
+              <Text style={[styles.statValue, { color: colors.success }]}>{reviewStats.totalReviews}</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Reviews</Text>
+            </View>
           </View>
-          <View style={[styles.statCard, { backgroundColor: colors.surface, borderRadius: borderRadius.lg }]}>
-            <Text style={[styles.statValue, { color: colors.warning }]}>{reviewStats.dueToday}</Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Due Today</Text>
-          </View>
-          <View style={[styles.statCard, { backgroundColor: colors.surface, borderRadius: borderRadius.lg }]}>
-            <Text style={[styles.statValue, { color: colors.success }]}>{reviewStats.totalReviews}</Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Reviews</Text>
-          </View>
-        </View>
+        </FadeSlideIn>
       )}
 
       {dueReviews.length > 0 && (
-        <View style={[styles.section, { backgroundColor: colors.surface, borderRadius: borderRadius.lg }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Reviews Due</Text>
-          {dueReviews.slice(0, 3).map((task) => (
-            <TouchableOpacity
-              key={task.id}
-              style={[styles.reviewItem, { borderBottomColor: colors.border }]}
-              onPress={() => navigation.navigate('ReviewDetail', { taskId: task.id })}
-            >
-              <View style={styles.reviewContent}>
-                <Text style={[styles.reviewTitle, { color: colors.text }]} numberOfLines={1}>
-                  {task.title}
-                </Text>
-                {task.subject && (
-                  <Text style={[styles.reviewSubject, { color: colors.primary }]}>{task.subject}</Text>
-                )}
-              </View>
-              <Text style={[styles.reviewArrow, { color: colors.primary }]}>→</Text>
-            </TouchableOpacity>
-          ))}
-          {dueReviews.length > 3 && (
-            <Text style={[styles.moreText, { color: colors.primary }]}>
-              +{dueReviews.length - 3} more
-            </Text>
-          )}
-        </View>
+        <FadeSlideIn index={2}>
+          <View style={[styles.section, { backgroundColor: colors.surface, borderRadius: borderRadius.lg }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Reviews Due</Text>
+            {dueReviews.slice(0, 3).map((task) => (
+              <AnimatedPressable
+                key={task.id}
+                style={[styles.reviewItem, { borderBottomColor: colors.border }]}
+                onPress={() => navigation.navigate('ReviewDetail', { taskId: task.id })}
+                accessibilityRole="button"
+                accessibilityLabel={`Review task: ${task.title}`}
+              >
+                <View style={styles.reviewContent}>
+                  <Text style={[styles.reviewTitle, { color: colors.text }]} numberOfLines={1}>
+                    {task.title}
+                  </Text>
+                  {task.subject && (
+                    <Text style={[styles.reviewSubject, { color: colors.primary }]}>{task.subject}</Text>
+                  )}
+                </View>
+                <IconChevron direction="right" size={16} color={colors.primary} accessibilityLabel="Ver reseña" />
+              </AnimatedPressable>
+            ))}
+            {dueReviews.length > 3 && (
+              <Text style={[styles.moreText, { color: colors.primary }]}>
+                +{dueReviews.length - 3} more
+              </Text>
+            )}
+          </View>
+        </FadeSlideIn>
       )}
 
       {feedback && (
-        <View style={[styles.section, { backgroundColor: colors.surface, borderRadius: borderRadius.lg }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Weekly Summary</Text>
-          <View style={styles.feedbackRow}>
-            <View style={styles.feedbackItem}>
-              <Text style={[styles.feedbackValue, { color: colors.success }]}>{feedback.tasksCompleted}</Text>
-              <Text style={[styles.feedbackLabel, { color: colors.textSecondary }]}>Completed</Text>
-            </View>
-            <View style={styles.feedbackItem}>
-              <Text style={[styles.feedbackValue, { color: colors.warning }]}>{feedback.tasksPending}</Text>
-              <Text style={[styles.feedbackLabel, { color: colors.textSecondary }]}>Pending</Text>
-            </View>
-            <View style={styles.feedbackItem}>
-              <Text style={[styles.feedbackValue, { color: colors.error }]}>{feedback.tasksOverdue}</Text>
-              <Text style={[styles.feedbackLabel, { color: colors.textSecondary }]}>Overdue</Text>
-            </View>
-            <View style={styles.feedbackItem}>
-              <Text style={[styles.feedbackValue, { color: colors.primary }]}>{feedback.studyHours}h</Text>
-              <Text style={[styles.feedbackLabel, { color: colors.textSecondary }]}>Study</Text>
+        <FadeSlideIn index={3}>
+          <View style={[styles.section, { backgroundColor: colors.surface, borderRadius: borderRadius.lg }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Weekly Summary</Text>
+            <View style={styles.feedbackRow}>
+              <View style={styles.feedbackItem}>
+                <Text style={[styles.feedbackValue, { color: colors.success }]}>{feedback.tasksCompleted}</Text>
+                <Text style={[styles.feedbackLabel, { color: colors.textSecondary }]}>Completed</Text>
+              </View>
+              <View style={styles.feedbackItem}>
+                <Text style={[styles.feedbackValue, { color: colors.warning }]}>{feedback.tasksPending}</Text>
+                <Text style={[styles.feedbackLabel, { color: colors.textSecondary }]}>Pending</Text>
+              </View>
+              <View style={styles.feedbackItem}>
+                <Text style={[styles.feedbackValue, { color: colors.error }]}>{feedback.tasksOverdue}</Text>
+                <Text style={[styles.feedbackLabel, { color: colors.textSecondary }]}>Overdue</Text>
+              </View>
+              <View style={styles.feedbackItem}>
+                <Text style={[styles.feedbackValue, { color: colors.primary }]}>{feedback.studyHours}h</Text>
+                <Text style={[styles.feedbackLabel, { color: colors.textSecondary }]}>Study</Text>
+              </View>
             </View>
           </View>
-        </View>
+        </FadeSlideIn>
       )}
 
       {recommendations.length > 0 && (
-        <View style={[styles.section, { backgroundColor: colors.surface, borderRadius: borderRadius.lg }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Recommendations</Text>
-          {recommendations.slice(0, 3).map((rec, index) => (
-            <View key={index} style={[styles.recItem, { borderBottomColor: colors.border }]}>
-              <Text style={[styles.recBullet, { color: colors.primary }]}>•</Text>
-              <Text style={[styles.recText, { color: colors.textSecondary }]}>{rec}</Text>
-            </View>
-          ))}
-        </View>
+        <FadeSlideIn index={4}>
+          <View style={[styles.section, { backgroundColor: colors.surface, borderRadius: borderRadius.lg }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Recommendations</Text>
+            {recommendations.slice(0, 3).map((rec, index) => (
+              <View key={index} style={[styles.recItem, { borderBottomColor: colors.border }]}>
+                <Text style={[styles.recBullet, { color: colors.primary }]}>•</Text>
+                <Text style={[styles.recText, { color: colors.textSecondary }]}>{rec}</Text>
+              </View>
+            ))}
+          </View>
+        </FadeSlideIn>
       )}
     </ScrollView>
   );

@@ -2,15 +2,17 @@ import { useEffect } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
   ScrollView,
   Alert,
-  ActivityIndicator,
 } from 'react-native';
 import { useTheme } from '../hooks';
 import { useTaskStore } from '../store/useTaskStore';
 import { Countdown } from '../components/tasks/Countdown';
+import { AnimatedPressable } from '../components/AnimatedPressable';
+import { FadeSlideIn } from '../components/FadeSlideIn';
+import { ScreenSkeleton } from '../components/Skeleton';
+import { IconChevron } from '../components/icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -68,113 +70,130 @@ export function TaskDetailScreen({ navigation, route }: Props) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={[styles.backButton, { color: colors.primary }]}>← Back</Text>
-        </TouchableOpacity>
-      </View>
+      <FadeSlideIn index={0}>
+        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+          <AnimatedPressable
+            style={styles.backRow}
+            onPress={() => navigation.goBack()}
+            accessibilityRole="button"
+            accessibilityLabel="Volver atrás"
+          >
+            <IconChevron direction="left" size={18} color={colors.primary} />
+            <Text style={[styles.backButton, { color: colors.primary }]}>Back</Text>
+          </AnimatedPressable>
+        </View>
+      </FadeSlideIn>
 
       {isLoading ? (
-        <View style={[styles.loading, { backgroundColor: colors.background }]}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
+        <ScreenSkeleton count={2} />
       ) : !selectedTask ? (
         <View style={[styles.loading, { backgroundColor: colors.background }]}>
           <Text style={[styles.backButton, { color: colors.text }]}>{error || 'Failed to load task'}</Text>
-          <TouchableOpacity
+          <AnimatedPressable
             style={[styles.actionButton, { backgroundColor: colors.primary, width: 140, alignSelf: 'center', marginTop: 16 }]}
             onPress={() => loadTask(taskId)}
+            accessibilityRole="button"
+            accessibilityLabel="Reintentar carga de tarea"
           >
             <Text style={styles.actionButtonText}>Retry</Text>
-          </TouchableOpacity>
+          </AnimatedPressable>
         </View>
       ) : (
         <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+          <FadeSlideIn index={1}>
+            <View style={styles.content}>
+              <View style={styles.titleRow}>
+                <Text style={[styles.title, { color: colors.text }]}>{selectedTask.title}</Text>
+                <View style={[styles.priorityBadge, { backgroundColor: priorityColors[selectedTask.priority] + '20' }]}>
+                  <Text style={[styles.priorityText, { color: priorityColors[selectedTask.priority] }]}>
+                    {selectedTask.priority}
+                  </Text>
+                </View>
+              </View>
 
-      <View style={styles.content}>
-        <View style={styles.titleRow}>
-          <Text style={[styles.title, { color: colors.text }]}>{selectedTask.title}</Text>
-          <View style={[styles.priorityBadge, { backgroundColor: priorityColors[selectedTask.priority] + '20' }]}>
-            <Text style={[styles.priorityText, { color: priorityColors[selectedTask.priority] }]}>
-              {selectedTask.priority}
-            </Text>
-          </View>
-        </View>
+              {selectedTask.description && (
+                <Text style={[styles.description, { color: colors.textSecondary }]}>
+                  {selectedTask.description}
+                </Text>
+              )}
 
-        {selectedTask.description && (
-          <Text style={[styles.description, { color: colors.textSecondary }]}>
-            {selectedTask.description}
-          </Text>
-        )}
+              {hasDeadline && (
+                <View style={[styles.countdownCard, { backgroundColor: colors.surface, borderRadius: borderRadius.lg }]}>
+                  <Text style={[styles.countdownLabel, { color: colors.textSecondary }]}>
+                    {isOverdue ? 'Overdue by' : 'Time remaining'}
+                  </Text>
+                  <Countdown
+                    targetDate={selectedTask.due_date!}
+                    targetTime={selectedTask.due_time ?? undefined}
+                  />
+                  {selectedTask.due_time && (
+                    <Text style={[styles.deadlineTime, { color: colors.textTertiary }]}>
+                      Due: {selectedTask.due_date} at {selectedTask.due_time}
+                    </Text>
+                  )}
+                </View>
+              )}
 
-        {hasDeadline && (
-          <View style={[styles.countdownCard, { backgroundColor: colors.surface, borderRadius: borderRadius.lg }]}>
-            <Text style={[styles.countdownLabel, { color: colors.textSecondary }]}>
-              {isOverdue ? 'Overdue by' : 'Time remaining'}
-            </Text>
-            <Countdown
-              targetDate={selectedTask.due_date!}
-              targetTime={selectedTask.due_time ?? undefined}
-            />
-            {selectedTask.due_time && (
-              <Text style={[styles.deadlineTime, { color: colors.textTertiary }]}>
-                Due: {selectedTask.due_date} at {selectedTask.due_time}
-              </Text>
-            )}
-          </View>
-        )}
+              <View style={[styles.infoCard, { backgroundColor: colors.surface, borderRadius: borderRadius.lg }]}>
+                <View style={styles.infoRow}>
+                  <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Status</Text>
+                  <Text style={[styles.infoValue, { color: colors.text }]}>{statusLabels[selectedTask.status]}</Text>
+                </View>
+                {selectedTask.categories && (
+                  <View style={styles.infoRow}>
+                    <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Category</Text>
+                    <Text style={[styles.infoValue, { color: colors.text }]}>{selectedTask.categories.name}</Text>
+                  </View>
+                )}
+                {selectedTask.estimated_minutes && (
+                  <View style={styles.infoRow}>
+                    <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Estimated</Text>
+                    <Text style={[styles.infoValue, { color: colors.text }]}>{selectedTask.estimated_minutes} min</Text>
+                  </View>
+                )}
+              </View>
 
-        <View style={[styles.infoCard, { backgroundColor: colors.surface, borderRadius: borderRadius.lg }]}>
-          <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Status</Text>
-            <Text style={[styles.infoValue, { color: colors.text }]}>{statusLabels[selectedTask.status]}</Text>
-          </View>
-          {selectedTask.categories && (
-            <View style={styles.infoRow}>
-              <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Category</Text>
-              <Text style={[styles.infoValue, { color: colors.text }]}>{selectedTask.categories.name}</Text>
+              <View style={styles.actions}>
+                {selectedTask.status !== 'completed' && (
+                  <>
+                    <AnimatedPressable
+                      style={[styles.actionButton, { backgroundColor: colors.primary, borderRadius: borderRadius.md }]}
+                      onPress={() => handleStatusChange('in_progress')}
+                      accessibilityRole="button"
+                      accessibilityLabel="Start task"
+                    >
+                      <Text style={styles.actionButtonText}>Start</Text>
+                    </AnimatedPressable>
+                    <AnimatedPressable
+                      style={[styles.actionButton, { backgroundColor: colors.success, borderRadius: borderRadius.md }]}
+                      onPress={() => handleStatusChange('completed')}
+                      accessibilityRole="button"
+                      accessibilityLabel="Complete task"
+                    >
+                      <Text style={styles.actionButtonText}>Complete</Text>
+                    </AnimatedPressable>
+                  </>
+                )}
+                <AnimatedPressable
+                  style={[styles.actionButton, { backgroundColor: colors.surfaceVariant, borderRadius: borderRadius.md }]}
+                  onPress={handleEdit}
+                  accessibilityRole="button"
+                  accessibilityLabel="Edit task"
+                >
+                  <Text style={[styles.actionButtonText, { color: colors.text }]}>Edit</Text>
+                </AnimatedPressable>
+                <AnimatedPressable
+                  style={[styles.actionButton, { backgroundColor: colors.errorLight, borderRadius: borderRadius.md }]}
+                  onPress={handleDelete}
+                  accessibilityRole="button"
+                  accessibilityLabel="Delete task"
+                >
+                  <Text style={[styles.actionButtonText, { color: colors.error }]}>Delete</Text>
+                </AnimatedPressable>
+              </View>
             </View>
-          )}
-          {selectedTask.estimated_minutes && (
-            <View style={styles.infoRow}>
-              <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Estimated</Text>
-              <Text style={[styles.infoValue, { color: colors.text }]}>{selectedTask.estimated_minutes} min</Text>
-            </View>
-          )}
-        </View>
-
-        <View style={styles.actions}>
-          {selectedTask.status !== 'completed' && (
-            <>
-              <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: colors.primary, borderRadius: borderRadius.md }]}
-                onPress={() => handleStatusChange('in_progress')}
-              >
-                <Text style={styles.actionButtonText}>Start</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: colors.success, borderRadius: borderRadius.md }]}
-                onPress={() => handleStatusChange('completed')}
-              >
-                <Text style={styles.actionButtonText}>Complete</Text>
-              </TouchableOpacity>
-            </>
-          )}
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: colors.surfaceVariant, borderRadius: borderRadius.md }]}
-            onPress={handleEdit}
-          >
-            <Text style={[styles.actionButtonText, { color: colors.text }]}>Edit</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: colors.errorLight, borderRadius: borderRadius.md }]}
-            onPress={handleDelete}
-          >
-            <Text style={[styles.actionButtonText, { color: colors.error }]}>Delete</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </ScrollView>
+          </FadeSlideIn>
+        </ScrollView>
       )}
     </View>
   );
@@ -192,6 +211,12 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 16,
     paddingBottom: 8,
+  },
+  backRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 4,
   },
   backButton: {
     fontSize: 16,

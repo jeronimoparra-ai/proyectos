@@ -6,12 +6,16 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
-  ActivityIndicator,
   TextInput,
   Linking,
+  ActivityIndicator,
 } from 'react-native';
 import { useTheme } from '../hooks';
 import { useAcademicTaskStore } from '../store/useAcademicTaskStore';
+import { AnimatedPressable } from '../components/AnimatedPressable';
+import { FadeSlideIn } from '../components/FadeSlideIn';
+import { ScreenSkeleton } from '../components/Skeleton';
+import { IconChevron } from '../components/icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -81,25 +85,33 @@ export function AcademicTaskDetailScreen({ navigation, route }: Props) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={[styles.backButton, { color: colors.primary }]}>← Back</Text>
-        </TouchableOpacity>
-      </View>
+      <FadeSlideIn index={0}>
+        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+          <AnimatedPressable
+            style={styles.backRow}
+            onPress={() => navigation.goBack()}
+            accessibilityRole="button"
+            accessibilityLabel="Volver atrás"
+          >
+            <IconChevron direction="left" size={18} color={colors.primary} />
+            <Text style={[styles.backButton, { color: colors.primary }]}>Back</Text>
+          </AnimatedPressable>
+        </View>
+      </FadeSlideIn>
 
       {isLoading ? (
-        <View style={[styles.loading, { backgroundColor: colors.background }]}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
+        <ScreenSkeleton count={2} />
       ) : !selectedTask ? (
         <View style={[styles.loading, { backgroundColor: colors.background }]}>
           <Text style={[styles.backButton, { color: colors.text }]}>{error || 'Failed to load task'}</Text>
-          <TouchableOpacity
+          <AnimatedPressable
             style={[styles.actionButton, { backgroundColor: colors.primary, width: 140, alignSelf: 'center', marginTop: 16 }]}
             onPress={() => loadTask(taskId)}
+            accessibilityRole="button"
+            accessibilityLabel="Reintentar carga de tarea"
           >
             <Text style={styles.actionButtonText}>Retry</Text>
-          </TouchableOpacity>
+          </AnimatedPressable>
         </View>
       ) : (
         <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -265,6 +277,12 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 16,
     paddingBottom: 8,
+  },
+  backRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 4,
   },
   backButton: {
     fontSize: 16,

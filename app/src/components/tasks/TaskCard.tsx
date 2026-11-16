@@ -1,6 +1,8 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTheme } from '../../hooks';
 import { Countdown } from './Countdown';
+import { AnimatedPressable } from '../AnimatedPressable';
+import { IconCheck } from '../icons';
 import type { Task } from '../../types';
 
 interface TaskCardProps {
@@ -31,7 +33,7 @@ export function TaskCard({ task, onPress, onComplete }: TaskCardProps) {
   const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== 'completed';
 
   return (
-    <TouchableOpacity
+    <AnimatedPressable
       style={[
         styles.container,
         {
@@ -41,7 +43,8 @@ export function TaskCard({ task, onPress, onComplete }: TaskCardProps) {
         },
       ]}
       onPress={() => onPress(task)}
-      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`Task: ${task.title}`}
     >
       <View style={styles.header}>
         <View style={styles.titleRow}>
@@ -55,9 +58,12 @@ export function TaskCard({ task, onPress, onComplete }: TaskCardProps) {
             ]}
             onPress={() => onComplete(task)}
             hitSlop={{ top: 11, bottom: 11, left: 11, right: 11 }}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: task.status === 'completed' }}
+            accessibilityLabel={task.status === 'completed' ? 'Mark task as incomplete' : 'Mark task as complete'}
           >
             {task.status === 'completed' && (
-              <Text style={styles.checkmark}>✓</Text>
+              <IconCheck size={13} color="#fff" accessibilityLabel="Completed" />
             )}
           </TouchableOpacity>
           <Text
@@ -99,7 +105,7 @@ export function TaskCard({ task, onPress, onComplete }: TaskCardProps) {
           </View>
         )}
       </View>
-    </TouchableOpacity>
+    </AnimatedPressable>
   );
 }
 

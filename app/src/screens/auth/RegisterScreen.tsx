@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../../hooks';
 import { supabase } from '../../services/supabase';
+import { AnimatedPressable } from '../../components/AnimatedPressable';
 
 interface RegisterScreenProps {
   navigation: any;
@@ -159,17 +160,19 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
             />
           </View>
 
-          <TouchableOpacity
+          <AnimatedPressable
             style={[styles.button, { backgroundColor: colors.primary, borderRadius: borderRadius.md }]}
             onPress={handleRegister}
             disabled={isLoading}
+            accessibilityRole="button"
+            accessibilityLabel="Create account"
           >
             {isLoading ? (
               <ActivityIndicator color="#fff" />
             ) : (
               <Text style={styles.buttonText}>Create Account</Text>
             )}
-          </TouchableOpacity>
+          </AnimatedPressable>
 
           <TouchableOpacity
             style={styles.linkButton}

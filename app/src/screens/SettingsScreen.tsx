@@ -4,18 +4,19 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   TextInput,
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../hooks/useTheme';
 import { useAuthStore, useAppStore, clearAllUserStores } from '../store';
 import { supabase } from '../services/supabase';
 import { notificationService } from '../services/notification';
 import { apiClient } from '../services/api';
 import { GoogleCalendarSection } from '../components/calendar/GoogleCalendarSection';
+import { AnimatedPressable } from '../components/AnimatedPressable';
+import { FadeSlideIn } from '../components/FadeSlideIn';
+import { IconBell } from '../components/icons';
 import type { ColorScheme } from '../types';
 
 const THEME_OPTIONS: { label: string; value: ColorScheme }[] = [
@@ -132,7 +133,7 @@ export function SettingsScreen() {
               </Text>
             )}
           </View>
-          <TouchableOpacity
+          <AnimatedPressable
             style={[styles.editButton, { backgroundColor: colors.primary, borderRadius: borderRadius.md }]}
             onPress={() => {
               if (isEditingName) {
@@ -142,13 +143,15 @@ export function SettingsScreen() {
               }
             }}
             disabled={isSaving}
+            accessibilityRole="button"
+            accessibilityLabel={isEditingName ? 'Save profile name' : 'Edit profile name'}
           >
             {isSaving ? (
               <ActivityIndicator color="#fff" size="small" />
             ) : (
               <Text style={styles.editButtonText}>{isEditingName ? 'Save' : 'Edit'}</Text>
             )}
-          </TouchableOpacity>
+          </AnimatedPressable>
         </View>
       </View>
 
@@ -156,7 +159,7 @@ export function SettingsScreen() {
         <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Appearance</Text>
         <View style={styles.themeRow}>
           {THEME_OPTIONS.map((option) => (
-            <TouchableOpacity
+            <AnimatedPressable
               key={option.value}
               style={[
                 styles.themeOption,
@@ -166,6 +169,8 @@ export function SettingsScreen() {
                 },
               ]}
               onPress={() => setColorScheme(option.value)}
+              accessibilityRole="button"
+              accessibilityLabel={`Select ${option.label} theme`}
             >
               <Text
                 style={[
@@ -175,7 +180,7 @@ export function SettingsScreen() {
               >
                 {option.label}
               </Text>
-            </TouchableOpacity>
+            </AnimatedPressable>
           ))}
         </View>
       </View>
@@ -183,7 +188,7 @@ export function SettingsScreen() {
       <View style={[styles.section, { backgroundColor: colors.surface, borderRadius: borderRadius.lg }]}>
         <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Notifications</Text>
         <View style={styles.notificationRow}>
-          <Ionicons name="notifications-outline" size={20} color={colors.textSecondary} />
+          <IconBell size={20} color={colors.textSecondary} />
           <Text style={[styles.fieldValue, { color: colors.text, flex: 1 }]}>
             {unreadCount !== null ? `${unreadCount} unread` : 'Loading...'}
           </Text>
@@ -198,12 +203,14 @@ export function SettingsScreen() {
 
       <GoogleCalendarSection />
 
-      <TouchableOpacity
+      <AnimatedPressable
         style={[styles.signOutButton, { borderColor: colors.error, borderRadius: borderRadius.md }]}
         onPress={handleSignOut}
+        accessibilityRole="button"
+        accessibilityLabel="Sign out"
       >
         <Text style={[styles.signOutText, { color: colors.error }]}>Sign Out</Text>
-      </TouchableOpacity>
+      </AnimatedPressable>
     </ScrollView>
   );
 }
