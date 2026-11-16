@@ -183,7 +183,10 @@ jobs:
             exit 1
           fi
           cd android
-          echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > release.keystore
+          # storeFile file('release.keystore') se resuelve relativo al MODULO
+          # (app/android/app/), no al directorio de trabajo del workflow.
+          echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > app/release.keystore
+          test -s app/release.keystore || { echo "::error::keystore vacia"; exit 1; }
           # gradle.properties generado por prebuild no acaba en salto de linea:
           # sin el \n inicial, la ultima propiedad queda concatenada y el
           # autolinking de Expo recibe JSON corrupto (node exit 1).
@@ -228,7 +231,7 @@ jobs:
       - name: Limpiar keystore del runner
         if: always()
         working-directory: app/android
-        run: rm -f release.keystore
+        run: rm -f app/release.keystore
 
       - name: Stage artifact
         run: |
