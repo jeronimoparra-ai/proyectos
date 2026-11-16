@@ -33,14 +33,13 @@ export async function requestCalendarAccess(): Promise<boolean> {
   return result.granted;
 }
 
-async function writableCalendars(): Promise<Calendar.ExpoCalendar[]> {
-  const calendars = await Calendar.getCalendars(Calendar.EntityTypes.EVENT);
-  const editable = calendars.filter((calendar) => calendar.allowsModifications !== false);
-  return editable.length > 0 ? editable : calendars;
+async function allCalendars(): Promise<Calendar.ExpoCalendar[]> {
+  return Calendar.getCalendars(Calendar.EntityTypes.EVENT);
 }
 
 export async function listDeviceEvents(from: Date, to: Date): Promise<DeviceCalendarEvent[]> {
-  const calendars = await writableCalendars();
+  // Lectura: se pueden leer calendarios de solo lectura; no hace falta que sean editables.
+  const calendars = await allCalendars();
   if (calendars.length === 0) return [];
 
   const events = await Calendar.listEvents(calendars, from, to);
@@ -57,12 +56,13 @@ export async function listDeviceEvents(from: Date, to: Date): Promise<DeviceCale
 }
 
 export async function createDeviceEvent(input: NewDeviceEvent): Promise<string> {
-  const calendars = await writableCalendars();
-  const target =
-    calendars.find((calendar) => calendar.isPrimary && calendar.allowsModifications !== false) ??
-    calendars.find((calendar) => calendar.allowsModifications !== false);
+  // Escritura: NUNCA usar un calendario de solo lectura (lanzaria en Android).
+  const calendars = await allCalendars();
+  const editable = calendars.filter((calendar) => calendar.allowsModifications !== false);
+  if (editable.length === 0) throw new Error('No editable calendar found on this device.');
 
-  if (!target) throw new Error('No editable calendar found on this device.');
+  const target =
+    editable.find((calendar) => calendar.isPrimary) ?? editable[0];
 
   const event = await target.createEvent({
     title: input.title,
