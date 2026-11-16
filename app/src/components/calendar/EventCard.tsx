@@ -1,5 +1,7 @@
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../../hooks';
+import { AnimatedPressable } from '../AnimatedPressable';
+import { IconLocation } from '../icons';
 import type { Event } from '../../types';
 
 interface EventCardProps {
@@ -25,7 +27,7 @@ export function EventCard({ event, onPress }: EventCardProps) {
   const isAllDay = event.all_day;
 
   return (
-    <TouchableOpacity
+    <AnimatedPressable
       style={[
         styles.container,
         {
@@ -35,7 +37,8 @@ export function EventCard({ event, onPress }: EventCardProps) {
         },
       ]}
       onPress={() => onPress(event)}
-      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`Event: ${event.title}`}
     >
       <View style={styles.timeColumn}>
         {isAllDay ? (
@@ -53,9 +56,12 @@ export function EventCard({ event, onPress }: EventCardProps) {
           {event.title}
         </Text>
         {event.location && (
-          <Text style={[styles.location, { color: colors.textSecondary }]} numberOfLines={1}>
-            📍 {event.location}
-          </Text>
+          <View style={styles.locationRow}>
+            <IconLocation size={13} color={colors.textSecondary} />
+            <Text style={[styles.location, { color: colors.textSecondary }]} numberOfLines={1}>
+              {event.location}
+            </Text>
+          </View>
         )}
       </View>
 
@@ -64,7 +70,7 @@ export function EventCard({ event, onPress }: EventCardProps) {
           <Text style={[styles.sourceText, { color: sourceColors.google }]}>G</Text>
         </View>
       )}
-    </TouchableOpacity>
+    </AnimatedPressable>
   );
 }
 
@@ -94,8 +100,14 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   location: {
     fontSize: 12,
+    flex: 1,
   },
   sourceBadge: {
     width: 24,

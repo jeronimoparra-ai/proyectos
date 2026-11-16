@@ -1,5 +1,7 @@
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../../hooks';
+import { AnimatedPressable } from '../AnimatedPressable';
+import { IconBrain } from '../icons';
 import type { AcademicTask } from '../../types';
 
 interface AcademicTaskCardProps {
@@ -13,7 +15,7 @@ export function AcademicTaskCard({ task, onPress }: AcademicTaskCardProps) {
   const hasAIResult = !!task.ai_processed_at;
 
   return (
-    <TouchableOpacity
+    <AnimatedPressable
       style={[
         styles.container,
         {
@@ -22,7 +24,8 @@ export function AcademicTaskCard({ task, onPress }: AcademicTaskCardProps) {
         },
       ]}
       onPress={() => onPress(task)}
-      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`Academic task: ${task.title}`}
     >
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
@@ -30,6 +33,7 @@ export function AcademicTaskCard({ task, onPress }: AcademicTaskCardProps) {
         </Text>
         {hasAIResult && (
           <View style={[styles.aiBadge, { backgroundColor: colors.success + '20' }]}>
+            <IconBrain size={12} color={colors.success} style={{ marginRight: 4 }} />
             <Text style={[styles.aiBadgeText, { color: colors.success }]}>AI</Text>
           </View>
         )}
@@ -57,7 +61,7 @@ export function AcademicTaskCard({ task, onPress }: AcademicTaskCardProps) {
           </Text>
         )}
       </View>
-    </TouchableOpacity>
+    </AnimatedPressable>
   );
 }
 
@@ -84,6 +88,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   aiBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 8,

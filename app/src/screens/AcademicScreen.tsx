@@ -3,14 +3,16 @@ import {
   View,
   Text,
   FlatList,
-  TouchableOpacity,
   StyleSheet,
   TextInput,
-  ActivityIndicator,
 } from 'react-native';
 import { useTheme } from '../hooks';
 import { useAcademicTaskStore } from '../store/useAcademicTaskStore';
 import { AcademicTaskCard } from '../components/academic/AcademicTaskCard';
+import { AnimatedPressable } from '../components/AnimatedPressable';
+import { FadeSlideIn } from '../components/FadeSlideIn';
+import { ScreenSkeleton } from '../components/Skeleton';
+import { IconPlus, IconSearch, IconBrain } from '../components/icons';
 import type { AcademicTask } from '../types';
 import type { TabScreenProps } from '../navigation/types';
 
@@ -38,39 +40,46 @@ export function AcademicScreen({ navigation }: TabScreenProps<'Academic'>) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-        <Text style={[styles.title, { color: colors.text }]}>Academic</Text>
-        <TouchableOpacity
-          style={[styles.addButton, { backgroundColor: colors.primary, borderRadius: borderRadius.md }]}
-          onPress={handleCreateTask}
-        >
-          <Text style={styles.addButtonText}>+ New</Text>
-        </TouchableOpacity>
-      </View>
+      <FadeSlideIn index={0}>
+        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+          <Text style={[styles.title, { color: colors.text }]}>Academic</Text>
+          <AnimatedPressable
+            style={[styles.addButton, { backgroundColor: colors.primary, borderRadius: borderRadius.md }]}
+            onPress={handleCreateTask}
+            accessibilityRole="button"
+            accessibilityLabel="Create academic task"
+          >
+            <IconPlus size={16} color="#fff" />
+            <Text style={styles.addButtonText}>New</Text>
+          </AnimatedPressable>
+        </View>
 
-      <View style={[styles.searchContainer, { backgroundColor: colors.surfaceVariant, borderRadius: borderRadius.md }]}>
-        <TextInput
-          style={[styles.searchInput, { color: colors.text }]}
-          placeholder="Search academic tasks..."
-          placeholderTextColor={colors.textTertiary}
-          value={searchQuery}
-          onChangeText={handleSearch}
-        />
-      </View>
+        <View style={[styles.searchContainer, { backgroundColor: colors.surfaceVariant, borderRadius: borderRadius.md }]}>
+          <IconSearch size={18} color={colors.textTertiary} style={styles.searchIcon} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.text }]}
+            placeholder="Search academic tasks..."
+            placeholderTextColor={colors.textTertiary}
+            value={searchQuery}
+            onChangeText={handleSearch}
+          />
+        </View>
+      </FadeSlideIn>
 
       {isLoading ? (
-        <View style={styles.loading}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
+        <ScreenSkeleton count={3} />
       ) : (
         <FlatList
           data={tasks}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <AcademicTaskCard task={item} onPress={handleTaskPress} />
+          renderItem={({ item, index }) => (
+            <FadeSlideIn index={index}>
+              <AcademicTaskCard task={item} onPress={handleTaskPress} />
+            </FadeSlideIn>
           )}
           ListEmptyComponent={
             <View style={styles.empty}>
+              <IconBrain size={48} color={colors.textTertiary} accessibilityLabel="No academic tasks" />
               <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
                 No academic tasks yet
               </Text>
@@ -102,6 +111,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
@@ -111,12 +123,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginHorizontal: 16,
     marginBottom: 12,
+    paddingHorizontal: 12,
+  },
+  searchIcon: {
+    marginRight: 8,
   },
   searchInput: {
+    flex: 1,
     height: 44,
-    paddingHorizontal: 16,
     fontSize: 16,
   },
   list: {

@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../../hooks';
 import { supabase } from '../../services/supabase';
+import { AnimatedPressable } from '../../components/AnimatedPressable';
 
 interface LoginScreenProps {
   navigation: any;
@@ -110,17 +111,19 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
+          <AnimatedPressable
             style={[styles.button, { backgroundColor: colors.primary, borderRadius: borderRadius.md }]}
             onPress={handleLogin}
             disabled={isLoading}
+            accessibilityRole="button"
+            accessibilityLabel="Sign in"
           >
             {isLoading ? (
               <ActivityIndicator color="#fff" />
             ) : (
               <Text style={styles.buttonText}>Sign In</Text>
             )}
-          </TouchableOpacity>
+          </AnimatedPressable>
 
           <TouchableOpacity
             style={styles.linkButton}

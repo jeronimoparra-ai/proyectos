@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
   FlatList,
   ActivityIndicator,
@@ -13,6 +12,9 @@ import { useEventStore } from '../store/useEventStore';
 import { CalendarGrid } from '../components/calendar/CalendarGrid';
 import { WeekView } from '../components/calendar/WeekView';
 import { EventCard } from '../components/calendar/EventCard';
+import { AnimatedPressable } from '../components/AnimatedPressable';
+import { FadeSlideIn } from '../components/FadeSlideIn';
+import { IconChevron, IconPlus, IconCalendar } from '../components/icons';
 import type { Event } from '../types';
 import type { TabScreenProps } from '../navigation/types';
 
@@ -76,49 +78,66 @@ export function CalendarScreen({ navigation }: TabScreenProps<'Calendar'>) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
-        <Text style={[styles.title, { color: colors.text }]}>Calendar</Text>
-        <TouchableOpacity
-          style={[styles.addButton, { backgroundColor: colors.primary, borderRadius: borderRadius.md }]}
-          onPress={handleCreateEvent}
-        >
-          <Text style={styles.addButtonText}>+ Event</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.viewToggle}>
-        {VIEW_MODES.map((mode) => (
-          <TouchableOpacity
-            key={mode}
-            style={[
-              styles.viewToggleBtn,
-              {
-                backgroundColor: viewMode === mode ? colors.primary : colors.surfaceVariant,
-                borderRadius: borderRadius.md,
-              },
-            ]}
-            onPress={() => setViewMode(mode)}
+      <FadeSlideIn index={0}>
+        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+          <Text style={[styles.title, { color: colors.text }]}>Calendar</Text>
+          <AnimatedPressable
+            style={[styles.addButton, { backgroundColor: colors.primary, borderRadius: borderRadius.md }]}
+            onPress={handleCreateEvent}
+            accessibilityRole="button"
+            accessibilityLabel="Create event"
           >
-            <Text
-              style={[
-                styles.viewToggleText,
-                { color: viewMode === mode ? '#fff' : colors.textSecondary },
-              ]}
-            >
-              {mode}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+            <IconPlus size={16} color="#fff" />
+            <Text style={styles.addButtonText}>Event</Text>
+          </AnimatedPressable>
+        </View>
 
-      <View style={styles.monthNav}>
-        <TouchableOpacity onPress={navigatePrev} style={styles.navButton}>
-          <Text style={[styles.navArrow, { color: colors.primary }]}>{'←'}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={navigateNext} style={styles.navButton}>
-          <Text style={[styles.navArrow, { color: colors.primary }]}>{'→'}</Text>
-        </TouchableOpacity>
-      </View>
+        <View style={styles.viewToggle}>
+          {VIEW_MODES.map((mode) => (
+            <AnimatedPressable
+              key={mode}
+              style={[
+                styles.viewToggleBtn,
+                {
+                  backgroundColor: viewMode === mode ? colors.primary : colors.surfaceVariant,
+                  borderRadius: borderRadius.md,
+                },
+              ]}
+              onPress={() => setViewMode(mode)}
+              accessibilityRole="button"
+              accessibilityLabel={`View mode ${mode}`}
+            >
+              <Text
+                style={[
+                  styles.viewToggleText,
+                  { color: viewMode === mode ? '#fff' : colors.textSecondary },
+                ]}
+              >
+                {mode}
+              </Text>
+            </AnimatedPressable>
+          ))}
+        </View>
+
+        <View style={styles.monthNav}>
+          <AnimatedPressable
+            onPress={navigatePrev}
+            style={styles.navButton}
+            accessibilityRole="button"
+            accessibilityLabel="Previous period"
+          >
+            <IconChevron direction="left" size={22} color={colors.primary} />
+          </AnimatedPressable>
+          <AnimatedPressable
+            onPress={navigateNext}
+            style={styles.navButton}
+            accessibilityRole="button"
+            accessibilityLabel="Next period"
+          >
+            <IconChevron direction="right" size={22} color={colors.primary} />
+          </AnimatedPressable>
+        </View>
+      </FadeSlideIn>
 
       {viewMode === 'Month' ? (
         <CalendarGrid
@@ -148,13 +167,18 @@ export function CalendarScreen({ navigation }: TabScreenProps<'Calendar'>) {
             <FlatList
               data={todayEvents}
               keyExtractor={(item) => item.id}
-              renderItem={({ item }) => (
-                <EventCard event={item} onPress={handleEventPress} />
+              renderItem={({ item, index }) => (
+                <FadeSlideIn index={index}>
+                  <EventCard event={item} onPress={handleEventPress} />
+                </FadeSlideIn>
               )}
               ListEmptyComponent={
-                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                  No events for this day
-                </Text>
+                <View style={styles.emptyContainer}>
+                  <IconCalendar size={36} color={colors.textTertiary} accessibilityLabel="No events" />
+                  <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                    No events for this day
+                  </Text>
+                </View>
               }
               contentContainerStyle={styles.eventsList}
             />
@@ -181,6 +205,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
@@ -232,9 +259,14 @@ const styles = StyleSheet.create({
   loader: {
     marginTop: 20,
   },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 30,
+    gap: 8,
+  },
   emptyText: {
     textAlign: 'center',
-    marginTop: 20,
     fontSize: 14,
   },
 });
