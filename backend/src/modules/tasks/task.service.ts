@@ -1,9 +1,14 @@
 import { supabase } from '../../database/supabase';
 import { createAppError } from '../../middleware/error.middleware';
+import { taskQuerySchema } from './task.schema';
 import type { CreateTaskInput, UpdateTaskInput, TaskQueryInput } from './task.schema';
 
 export class TaskService {
-  async list(userId: string, query: TaskQueryInput) {
+  async list(userId: string, rawQuery: TaskQueryInput) {
+    // req.query llega sin validar (parseQuery es solo un cast): sin page/limit
+    // el range sería NaN-NaN y PostgREST devolvería count>0 con data=[].
+    const query = taskQuerySchema.parse(rawQuery);
+
     let qb = supabase
       .from('tasks')
       .select(`
