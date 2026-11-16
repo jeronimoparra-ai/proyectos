@@ -260,7 +260,8 @@ jobs:
             echo "::error::La APK esta firmada con la clave debug publica de AOSP; no se publica."
             exit 1
           fi
-          if ! grep -qi 'Signer #1' /tmp/opencode-apksigner.txt; then
+          # apksigner imprime "V2 Signer: certificate DN: ..." (no "Signer #1").
+          if ! grep -qiE 'V[123] Signer: certificate DN' /tmp/opencode-apksigner.txt; then
             echo "::error::La APK no tiene firma verificable"
             exit 1
           fi
