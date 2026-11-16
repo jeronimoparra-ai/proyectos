@@ -23,11 +23,7 @@ export default defineConfig({
     environment: 'node',
     // Run each file in its own worker to avoid cross-test pool leaks.
     pool: 'forks',
-    poolOptions: {
-      forks: {
-        singleFork: false,
-      },
-    },
+    maxWorkers: 1,
     include: ['tests/integration/scenarios/**/*.test.ts'],
     globalSetup: ['tests/integration/setup.ts'],
     // Individual scenarios that touch Postgres need enough time for schema setup.

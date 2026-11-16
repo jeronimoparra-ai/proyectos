@@ -94,8 +94,9 @@ ${truncatedContent}`;
     try {
       const cleaned = response.replace(/```json\n?|\n?```/g, '').trim();
       return JSON.parse(cleaned) as AISummaryResult;
-    } catch (err) {
-      console.error(`AI summary parse failed: ${err}, first 200 chars: ${response.substring(0, 200)}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`AI summary parse failed: ${message}, first 200 chars: ${response.substring(0, 200)}`);
       throw createAppError('AI response parse failed', 502, 'AI_PARSE_ERROR');
     }
   }
@@ -121,8 +122,9 @@ ${truncatedContent}`;
     try {
       const cleaned = response.replace(/```json\n?|\n?```/g, '').trim();
       return JSON.parse(cleaned) as AIQuestionsResult;
-    } catch (err) {
-      console.error(`AI questions parse failed: ${err}, first 200 chars: ${response.substring(0, 200)}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`AI questions parse failed: ${message}, first 200 chars: ${response.substring(0, 200)}`);
       throw createAppError('AI response parse failed', 502, 'AI_PARSE_ERROR');
     }
   }
@@ -150,8 +152,9 @@ Respond in JSON format:
     try {
       const cleaned = response.replace(/```json\n?|\n?```/g, '').trim();
       return JSON.parse(cleaned) as AIExplanationResult;
-    } catch (err) {
-      console.error(`AI explanation parse failed: ${err}, first 200 chars: ${response.substring(0, 200)}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`AI explanation parse failed: ${message}, first 200 chars: ${response.substring(0, 200)}`);
       throw createAppError('AI response parse failed', 502, 'AI_PARSE_ERROR');
     }
   }
