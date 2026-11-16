@@ -47,7 +47,8 @@ export class AcademicTaskService {
       throw createAppError('Academic task not found', 404, 'ACADEMIC_TASK_NOT_FOUND');
     }
 
-    return data as { id: string; content?: string; study_materials?: Array<{ type: string; content: string }>; [key: string]: unknown };
+    const typedData = data as { id: string; content?: string; study_materials?: Array<{ type: string; content: string }>; [key: string]: unknown };
+    return typedData;
   }
 
   async create(userId: string, input: CreateAcademicTaskInput) {
@@ -69,7 +70,8 @@ export class AcademicTaskService {
       throw createAppError('Failed to create academic task', 500, 'DB_ERROR');
     }
 
-    return data[0] as { id: string; [key: string]: unknown };
+    const createdTask = data[0] as { id: string; [key: string]: unknown };
+    return createdTask;
   }
 
   async update(userId: string, taskId: string, input: UpdateAcademicTaskInput) {
@@ -85,7 +87,8 @@ export class AcademicTaskService {
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
-    return data as { id: string; [key: string]: unknown };
+    const updatedTask = data as { id: string; [key: string]: unknown };
+    return updatedTask;
   }
 
   async softDelete(userId: string, taskId: string) {
@@ -103,7 +106,7 @@ export class AcademicTaskService {
   }
 
   async processWithAI(userId: string, taskId: string) {
-    const task = await this.getById(userId, taskId) as { content?: string; study_materials?: Array<{ type: string; content: string }> };
+    const task = await this.getById(userId, taskId);
 
     const contentParts: string[] = [];
 

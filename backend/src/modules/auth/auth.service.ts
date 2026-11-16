@@ -23,12 +23,12 @@ export class AuthService {
       throw createAppError('Failed to create user', 500, 'USER_CREATION_FAILED');
     }
 
-    const userMetadata = authData.user.user_metadata as Record<string, unknown> | undefined;
+    const userMetadata = (authData.user.user_metadata ?? {}) as Record<string, unknown>;
     return {
       user: {
         id: authData.user.id,
         email: authData.user.email!,
-        displayName: userMetadata?.display_name as string ?? null,
+        displayName: (userMetadata.display_name as string) ?? null,
       },
       session: authData.session,
     };
@@ -44,12 +44,12 @@ export class AuthService {
       throw createAppError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
     }
 
-    const userMetadata = authData.user.user_metadata as Record<string, unknown> | undefined;
+    const userMetadata = (authData.user.user_metadata ?? {}) as Record<string, unknown>;
     return {
       user: {
         id: authData.user.id,
         email: authData.user.email!,
-        displayName: userMetadata?.display_name as string ?? null,
+        displayName: (userMetadata.display_name as string) ?? null,
       },
       session: authData.session,
     };
@@ -72,12 +72,12 @@ export class AuthService {
       throw createAppError('Invalid session', 401, 'INVALID_SESSION');
     }
 
-    const userMetadata = data.user.user_metadata as Record<string, unknown> | undefined;
+    const userMetadata = (data.user.user_metadata ?? {}) as Record<string, unknown>;
     return {
       user: {
         id: data.user.id,
         email: data.user.email!,
-        displayName: userMetadata?.display_name as string ?? null,
+        displayName: (userMetadata.display_name as string) ?? null,
       },
     };
   }
@@ -117,12 +117,12 @@ export class AuthService {
       throw createAppError(error.message, 400, 'UPDATE_FAILED');
     }
 
-    const userMetadata = data.user.user_metadata as Record<string, unknown> | undefined;
+    const userMetadata = (data.user.user_metadata ?? {}) as Record<string, unknown>;
     return {
       user: {
         id: data.user.id,
         email: data.user.email!,
-        displayName: userMetadata?.display_name as string ?? null,
+        displayName: (userMetadata.display_name as string) ?? null,
       },
     };
   }

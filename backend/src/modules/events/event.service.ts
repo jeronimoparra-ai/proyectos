@@ -45,7 +45,8 @@ export class EventService {
       throw createAppError('Event not found', 404, 'EVENT_NOT_FOUND');
     }
 
-    return data as { id: string; [key: string]: unknown };
+    const event = data as { id: string; [key: string]: unknown };
+    return event;
   }
 
   async create(userId: string, input: CreateEventInput) {
@@ -57,7 +58,8 @@ export class EventService {
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
-    return data as { id: string; [key: string]: unknown };
+    const createdEvent = data as { id: string; [key: string]: unknown };
+    return createdEvent;
   }
 
   async update(userId: string, eventId: string, input: UpdateEventInput) {
@@ -73,7 +75,8 @@ export class EventService {
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
-    return data as { id: string; [key: string]: unknown };
+    const updatedEvent = data as { id: string; [key: string]: unknown };
+    return updatedEvent;
   }
 
   async softDelete(userId: string, eventId: string) {

@@ -24,9 +24,9 @@ export class AcademicTaskController {
 
   async getById(req: Request, res: Response, next: NextFunction) {
     try {
-      const authReq = req as AuthenticatedRequest;
+      const userId = (req as AuthenticatedRequest).userId!;
       const id = getStringParam(req.params.id);
-      const result = await academicTaskService.getById(authReq.userId!, id);
+      const result = await academicTaskService.getById(userId, id);
       res.json(result);
     } catch (error) {
       next(error);
@@ -35,9 +35,9 @@ export class AcademicTaskController {
 
   async create(req: Request, res: Response, next: NextFunction) {
     try {
-      const authReq = req as AuthenticatedRequest;
+      const userId = (req as AuthenticatedRequest).userId!;
       const result = await academicTaskService.create(
-        authReq.userId!,
+        userId,
         req.body as CreateAcademicTaskInput
       );
       res.status(201).json(result);
@@ -48,10 +48,10 @@ export class AcademicTaskController {
 
   async update(req: Request, res: Response, next: NextFunction) {
     try {
-      const authReq = req as AuthenticatedRequest;
+      const userId = (req as AuthenticatedRequest).userId!;
       const id = getStringParam(req.params.id);
       const result = await academicTaskService.update(
-        authReq.userId!,
+        userId,
         id,
         req.body as UpdateAcademicTaskInput
       );
@@ -63,9 +63,9 @@ export class AcademicTaskController {
 
   async delete(req: Request, res: Response, next: NextFunction) {
     try {
-      const authReq = req as AuthenticatedRequest;
+      const userId = (req as AuthenticatedRequest).userId!;
       const id = getStringParam(req.params.id);
-      const result = await academicTaskService.softDelete(authReq.userId!, id);
+      const result = await academicTaskService.softDelete(userId, id);
       res.json(result);
     } catch (error) {
       next(error);
@@ -74,9 +74,9 @@ export class AcademicTaskController {
 
   async processWithAI(req: Request, res: Response, next: NextFunction) {
     try {
-      const authReq = req as AuthenticatedRequest;
+      const userId = (req as AuthenticatedRequest).userId!;
       const id = getStringParam(req.params.id);
-      const result = await academicTaskService.processWithAI(authReq.userId!, id);
+      const result = await academicTaskService.processWithAI(userId, id);
       res.json(result);
     } catch (error) {
       next(error);

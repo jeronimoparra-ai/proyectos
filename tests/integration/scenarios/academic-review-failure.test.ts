@@ -70,6 +70,9 @@ describe('Academic Failure Fixtures (rollback atómico)', () => {
     try {
       // Crear un segundo usuario REAL: el guard uid != p_user_id debe rechazar
       // aunque el FK existe.
+      // La sesión guarda el rol authenticated desde el test anterior; reset primero,
+      // porque auth.users no concede INSERT a authenticated.
+      await client.query('RESET ROLE');
       const otherId = await insertAuthUser(client, 'academic-other@example.com');
 
       await client.query('BEGIN');
