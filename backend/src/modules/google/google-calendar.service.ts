@@ -1,6 +1,14 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { env } from '../../config/env';
-import { supabase } from '../../database/supabase';
+import { supabase, createServiceClient } from '../../database/supabase';
+
+// Cliente interno de proceso (service_role) para integraciones del backend.
+// Se crea perezosamente: nunca al importar el módulo (tests lo pueden mockear).
+let internalServiceClient: ReturnType<typeof createServiceClient> | null = null;
+function internalClient() {
+  if (!internalServiceClient) internalServiceClient = createServiceClient();
+  return internalServiceClient;
+}
 import { createAppError } from '../../middleware/error.middleware';
 
 const SCOPE = 'https://www.googleapis.com/auth/calendar.events.readonly';
@@ -60,9 +68,9 @@ export class GoogleCalendarService {
     const redirectUri = this.redirectUri();
     const state = randomBytes(32).toString('base64url');
     // Expired challenges carry no value and are removed on each new flow.
-    const cleanup = await supabase.from('calendar_oauth_states').delete().eq('user_id', userId).lt('expires_at', new Date().toISOString());
+    const cleanup = await internalClient().from('calendar_oauth_states').delete().eq('user_id', userId).lt('expires_at', new Date().toISOString());
     dbError(cleanup.error);
-    const { error } = await supabase.from('calendar_oauth_states').insert({
+    const { error } = await internalClient().from('calendar_oauth_states').insert({
       state_hash: hash(state), user_id: userId, redirect_uri: redirectUri,
       expires_at: new Date(Date.now() + 5 * 60_000).toISOString(),
     });
@@ -94,7 +102,7 @@ export class GoogleCalendarService {
   }
 
   private async connection(userId: string) {
-    const { data, error } = await supabase.from('calendar_integrations').select('*').eq('user_id', userId).eq('provider', 'google').maybeSingle();
+    const { data, error } = await internalClient().from('calendar_integrations').select('*').eq('user_id', userId).eq('provider', 'google').maybeSingle();
     dbError(error);
     return data;
   }
@@ -103,7 +111,7 @@ export class GoogleCalendarService {
     required(code, 4096, 'code'); required(state, 128, 'state'); required(redirectUri, 2048, 'redirectUri');
     if (!/^[A-Za-z0-9_-]{43}$/.test(state) || redirectUri !== this.redirectUri()) throw createAppError('Invalid OAuth state or redirect.', 400, 'GOOGLE_INVALID_STATE');
     // UPDATE RETURNING atomically consumes the challenge, including across workers.
-    const { data: challenge, error } = await supabase.from('calendar_oauth_states').update({ consumed_at: new Date().toISOString() }).is('consumed_at', null)
+    const { data: challenge, error } = await internalClient().from('calendar_oauth_states').update({ consumed_at: new Date().toISOString() }).is('consumed_at', null)
       .eq('state_hash', hash(state)).eq('user_id', userId).eq('redirect_uri', redirectUri)
       .gt('expires_at', new Date().toISOString()).select('state_hash').maybeSingle();
     dbError(error);
@@ -112,7 +120,7 @@ export class GoogleCalendarService {
     // Never mix a new account's access token with a prior account's refresh token.
     const refreshToken = tokens.refresh_token;
     if (!refreshToken) throw reconnect();
-    const saved = await supabase.rpc('complete_calendar_connection', {
+    const saved = await internalClient().rpc('complete_calendar_connection', {
       p_user_id: userId, p_state_hash: hash(state), p_redirect_uri: redirectUri,
       p_tokens: { access_token: tokens.access_token, refresh_token: refreshToken,
         token_expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString() },
@@ -130,13 +138,13 @@ export class GoogleCalendarService {
       try { tokens = await this.tokenRequest({ refresh_token: connection.refresh_token, grant_type: 'refresh_token' }); }
       catch (error) {
         if ((error as { code?: string }).code === 'GOOGLE_RECONNECT_REQUIRED') {
-          const invalidated = await supabase.from('calendar_integrations').update({ sync_enabled: false })
+          const invalidated = await internalClient().from('calendar_integrations').update({ sync_enabled: false })
             .eq('id', connection.id).eq('user_id', userId).eq('refresh_token', connection.refresh_token);
           dbError(invalidated.error);
         }
         throw error;
       }
-      const saved = await supabase.from('calendar_integrations').update({
+      const saved = await internalClient().from('calendar_integrations').update({
         access_token: tokens.access_token, refresh_token: tokens.refresh_token || connection.refresh_token,
         token_expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
       }).eq('id', connection.id).eq('user_id', userId).eq('refresh_token', connection.refresh_token).select('id').maybeSingle();
@@ -170,13 +178,13 @@ export class GoogleCalendarService {
         if (pageToken) pages.add(pageToken);
       } while (pageToken);
     }
-    const { data, error } = await supabase.rpc('import_calendar_events', { p_user_id: userId, p_integration_id: connection.id, p_events: [...events.values()] });
+    const { data, error } = await internalClient().rpc('import_calendar_events', { p_user_id: userId, p_integration_id: connection.id, p_events: [...events.values()] });
     dbError(error);
     return { message: 'Sync completed', ...data, total: events.size };
   }
 
   async disconnect(userId: string) {
-    const result = await supabase.rpc('disconnect_calendar', { p_user_id: userId });
+    const result = await internalClient().rpc('disconnect_calendar', { p_user_id: userId });
     dbError(result.error);
     // Imported events intentionally survive disconnection.
     return { message: 'Google Calendar disconnected' };

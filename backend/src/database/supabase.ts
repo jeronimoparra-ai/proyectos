@@ -95,6 +95,12 @@ export async function signOutVerifiedUser(token: string) {
   return admin.auth.admin.signOut(token);
 }
 
+// Internal service-role client for backend-only integrations (e.g. unified
+// Google Calendar). Never exposed to end users; bypasses RLS by design.
+export function createServiceClient() {
+  return createClient(env.supabaseUrl, env.supabaseServiceRoleKey, { auth: authOptions });
+}
+
 // Preserve existing service imports. Outside a verified request, access is
 // anonymous and ephemeral; there is deliberately no service-role fallback.
 export const supabase = new Proxy({} as SupabaseClient, {

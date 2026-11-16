@@ -45,6 +45,11 @@ DECLARE
     v_material JSONB;
     v_topic JSONB;
 BEGIN
+    -- Authenticated callers may only act within their own identity.
+    -- service_role (auth.uid() is NULL) bypasses this check.
+    IF auth.uid() IS NOT NULL AND p_user_id IS DISTINCT FROM auth.uid() THEN
+        RAISE EXCEPTION 'User scope mismatch' USING ERRCODE = '42501';
+    END IF;
     -- Insert the academic task
     INSERT INTO academic_tasks (user_id, title, subject, content)
     VALUES (p_user_id, p_title, p_subject, p_content)
@@ -128,6 +133,11 @@ DECLARE
     v_next_review_at TIMESTAMPTZ;
     v_total_reviews INTEGER;
 BEGIN
+    -- Authenticated callers may only act within their own identity.
+    -- service_role (auth.uid() is NULL) bypasses this check.
+    IF auth.uid() IS NOT NULL AND p_user_id IS DISTINCT FROM auth.uid() THEN
+        RAISE EXCEPTION 'User scope mismatch' USING ERRCODE = '42501';
+    END IF;
     -- Check for duplicate submission via idempotency key
     IF p_idempotency_key IS NOT NULL THEN
         SELECT r.*, at.review_count as sm2_repetitions, at.total_reviews

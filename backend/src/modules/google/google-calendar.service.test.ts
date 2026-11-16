@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import { calendarDatabase, databaseClient } from '../../../tests/support/calendar-db';
 import type { PGlite } from '@electric-sql/pglite';
 const mock = vi.hoisted(() => ({ client: null as any }));
-vi.mock('../../database/supabase', () => ({ supabase: new Proxy({}, { get: (_, key) => mock.client[key] }) }));
+vi.mock('../../database/supabase', () => { const p = new Proxy({}, { get: (_, key) => mock.client[key] }); return { supabase: p, createServiceClient: () => p }; });
 vi.mock('../../config/env', () => ({ env: { googleClientId: 'test-client', googleClientSecret: 'test-only-secret', googleRedirectUri: 'http://localhost:8081/' } }));
 import { GoogleCalendarService, mapGoogleEvent } from './google-calendar.service';
 const user = '11111111-1111-4111-8111-111111111111';
