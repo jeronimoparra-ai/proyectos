@@ -1,5 +1,5 @@
 /**
- * Migración limpia: 001-007 sobre Postgres desechable vacío.
+ * Migración limpia: 001-009 sobre Postgres desechable vacío.
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
@@ -23,8 +23,8 @@ describe('Migration Clean', () => {
     await closeTestPool();
   });
 
-  it('aplica las 7 migraciones sin error en BD vacía', () => {
-    expect(MIGRATION_FILES).toHaveLength(7);
+  it('aplica las 9 migraciones sin error en BD vacía', () => {
+    expect(MIGRATION_FILES).toHaveLength(9);
   });
 
   it('crea tablas core esperadas', async () => {

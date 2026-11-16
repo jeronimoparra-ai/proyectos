@@ -1,5 +1,5 @@
 /**
- * Migración incremental: datos de 001 se preservan al aplicar 002-007.
+ * Migración incremental: datos de 001 se preservan al aplicar 002-008.
  * Behaviour: applyMigrations incremental; existing stub only.
  * Instruction: MIGRACIÓN ... ACTUALIZACIÓN (001-00N sobre Postgres desechable).
  */
@@ -44,6 +44,7 @@ describe('Migration Update', () => {
         '005_calendar_integrations_hardening.sql',
         '006_academic_sm2_atomic.sql',
         '007_reminder_worker.sql',
+        '008_fix_handle_new_user.sql',
       ]);
     } finally {
       client.release();
