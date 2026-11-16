@@ -11,9 +11,9 @@ import { getStringParam, parseQuery } from '../../utils/helpers';
 export class AcademicTaskController {
   async list(req: Request, res: Response, next: NextFunction) {
     try {
-      const authReq = req as AuthenticatedRequest;
+      const userId = (req as AuthenticatedRequest).userId!;
       const result = await academicTaskService.list(
-        authReq.userId!,
+        userId,
         parseQuery<AcademicTaskQueryInput>(req.query as Record<string, unknown>)
       );
       res.json(result);

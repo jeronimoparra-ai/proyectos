@@ -98,7 +98,7 @@ describe('Push Failure Fixtures (SQL real)', () => {
       const res = await client.query(
         `INSERT INTO push_tokens (user_id, token, platform, active)
          VALUES ($1, $2, 'ios', TRUE)
-         ON CONFLICT (token) DO UPDATE SET platform = EXCLUDED.platform, active = TRUE
+         ON CONFLICT (token) DO UPDATE SET user_id = EXCLUDED.user_id, platform = EXCLUDED.platform, active = TRUE
          RETURNING user_id, platform`,
         [userB, TOKEN]
       );
