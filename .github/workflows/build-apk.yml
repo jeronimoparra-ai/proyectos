@@ -1,3 +1,5 @@
+name: Build APK
+
 # Build APK — Android release (hardened, T6b)
 #
 # Genera un APK instalable sin depender de EAS y lo publica como asset de una
