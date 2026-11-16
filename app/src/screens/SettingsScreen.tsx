@@ -199,7 +199,7 @@ export function SettingsScreen() {
           </View>
         </View>
         <Text style={[styles.hint, { color: colors.textTertiary }]}>
-          Push notifications are enabled for reminders and tasks
+          In-app reminders are enabled. Push delivery needs Firebase configuration.
         </Text>
       </View>
 

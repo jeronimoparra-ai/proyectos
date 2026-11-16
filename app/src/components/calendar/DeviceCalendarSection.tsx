@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
 import { eventService } from '../../services/event';
@@ -18,9 +18,14 @@ export function DeviceCalendarSection() {
   const { colors } = useTheme();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  // setBusy no actualiza hasta el siguiente render: dos toques rapidos pueden
+  // entrar juntos y duplicar la importacion/exportacion.
+  const running = useRef(false);
   const tasks = useTaskStore((state) => state.tasks);
 
   async function importEvents() {
+    if (running.current) return;
+    running.current = true;
     setBusy(true);
     setMessage('');
     try {
@@ -70,11 +75,14 @@ export function DeviceCalendarSection() {
     } catch (error) {
       setMessage((error as Error).message);
     } finally {
+      running.current = false;
       setBusy(false);
     }
   }
 
   async function exportTasks() {
+    if (running.current) return;
+    running.current = true;
     setBusy(true);
     setMessage('');
     try {
@@ -121,6 +129,7 @@ export function DeviceCalendarSection() {
     } catch (error) {
       setMessage((error as Error).message);
     } finally {
+      running.current = false;
       setBusy(false);
     }
   }

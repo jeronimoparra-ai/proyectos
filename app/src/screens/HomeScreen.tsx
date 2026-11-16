@@ -79,7 +79,7 @@ export function HomeScreen() {
           <View style={styles.statsRow}>
             <View style={[styles.statCard, { backgroundColor: colors.surface, borderRadius: borderRadius.lg }]}>
               <Text style={[styles.statValue, { color: colors.primary }]}>{reviewStats.totalTasks}</Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total Tasks</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Academic Tasks</Text>
             </View>
             <View style={[styles.statCard, { backgroundColor: colors.surface, borderRadius: borderRadius.lg }]}>
               <Text style={[styles.statValue, { color: colors.warning }]}>{reviewStats.dueToday}</Text>
