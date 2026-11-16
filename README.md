@@ -161,6 +161,10 @@ Para el APK publicado, las variables `EXPO_PUBLIC_*` se configuran como **secret
 | POST | `/api/ai/questions` | Generar preguntas de estudio |
 | POST | `/api/ai/explain` | Explicar un concepto |
 | POST / DELETE | `/api/notifications/push-token` | Registrar / revocar push token |
+| GET / POST | `/api/academic` | Tareas académicas y repaso |
+| GET / POST | `/api/study-sessions` | Sesiones de estudio |
+| GET / POST | `/api/reminders` | Recordatorios |
+| GET | `/api/google` | Estado de Google Calendar |
 
 ---
 

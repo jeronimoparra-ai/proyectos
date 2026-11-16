@@ -9,14 +9,14 @@ export function ConfigErrorScreen({ validation }: ConfigErrorScreenProps) {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.icon}>⚠️</Text>
-      <Text style={styles.title}>Configuración incompleta</Text>
+      <Text style={styles.title}>Configuration incomplete</Text>
       <Text style={styles.subtitle}>
-        La app no puede iniciarse porque faltan variables de entorno necesarias.
+        The app cannot start because required environment variables are missing.
       </Text>
 
       {validation.missingVars.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Variables faltantes:</Text>
+          <Text style={styles.sectionTitle}>Missing variables:</Text>
           {validation.missingVars.map((varName) => (
             <View key={varName} style={styles.varItem}>
               <Text style={styles.varName}>{varName}</Text>
@@ -27,7 +27,7 @@ export function ConfigErrorScreen({ validation }: ConfigErrorScreenProps) {
 
       {validation.warnings.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Advertencias:</Text>
+          <Text style={styles.sectionTitle}>Warnings:</Text>
           {validation.warnings.map((warning, i) => (
             <Text key={i} style={styles.warning}>
               {warning}
@@ -37,9 +37,9 @@ export function ConfigErrorScreen({ validation }: ConfigErrorScreenProps) {
       )}
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Cómo solucionarlo:</Text>
+        <Text style={styles.sectionTitle}>How to fix it:</Text>
         <Text style={styles.instruction}>
-          1. Define los secrets del repositorio en{'\n'}
+          1. Set the repository secrets in{'\n'}
           <Text style={styles.code}>Settings → Secrets and variables → Actions</Text>
         </Text>
         <Text style={styles.instruction}>

@@ -1,7 +1,7 @@
 /**
- * Migración incremental: datos de 001 se preservan al aplicar 002-008.
+ * Migración incremental: datos de 001 se preservan al aplicar 002-010.
  * Behaviour: applyMigrations incremental; existing stub only.
- * Instruction: MIGRACIÓN ... ACTUALIZACIÓN (001-00N sobre Postgres desechable).
+ * Instruction: MIGRACIÓN ... ACTUALIZACIÓN (001-010 sobre Postgres desechable).
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
@@ -45,6 +45,8 @@ describe('Migration Update', () => {
         '006_academic_sm2_atomic.sql',
         '007_reminder_worker.sql',
         '008_fix_handle_new_user.sql',
+        '009_grant_table_privileges.sql',
+        '010_fix_task_soft_delete_rls.sql',
       ]);
     } finally {
       client.release();
