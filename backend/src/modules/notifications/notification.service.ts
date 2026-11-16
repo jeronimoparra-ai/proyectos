@@ -41,15 +41,16 @@ export class NotificationService {
     type: string = 'general',
     data?: Record<string, unknown>
   ) {
-    const { data: notification, error } = await supabase
+    const response = await supabase
       .from('notifications')
       .insert({ user_id: userId, title, body, type, data })
       .select()
       .single();
 
+    const { data: notification, error } = response as { data: { id: string; [key: string]: unknown } | null; error: Error | null };
+
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
-    const createdNotification = notification as { id: string; [key: string]: unknown };
-    return createdNotification;
+    return notification as { id: string; [key: string]: unknown };
   }
 
   // --- ENVÍO hacia Expo con timeout y manejo por token ---------------
@@ -298,7 +299,7 @@ export class NotificationService {
     if (existing && existing.user_id !== userId) {
       if (input.clientTimestamp) {
         const clientTime = new Date(input.clientTimestamp).getTime();
-        const existingTime = new Date(existing.updated_at).getTime();
+        const existingTime = new Date(existing.updated_at as string).getTime();
         if (!isNaN(clientTime) && !isNaN(existingTime) && clientTime < existingTime) {
           return existing;
         }
@@ -306,7 +307,7 @@ export class NotificationService {
     }
 
     // UNIQUE(token) global: onConflict debe apuntar a 'token' (no a 'user_id,token').
-    const { data, error } = await supabase
+    const response = await supabase
       .from('push_tokens')
       .upsert(
         {
@@ -321,9 +322,10 @@ export class NotificationService {
       .select()
       .single();
 
+    const { data, error } = response as { data: { user_id: string; token: string; platform: string; active: boolean; updated_at: string } | null; error: Error | null };
+
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
-    const registeredToken = data as { user_id: string; token: string; platform: string; active: boolean; updated_at: string };
-    return registeredToken;
+    return data as { user_id: string; token: string; platform: string; active: boolean; updated_at: string };
   }
 
   // --- Desvinculación idempotente al cerrar sesión (T2) ----------------

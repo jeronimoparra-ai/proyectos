@@ -103,10 +103,10 @@ export class GoogleCalendarService {
   }
 
   private async connection(userId: string) {
-    const { data, error } = await internalClient().from('calendar_integrations').select('*').eq('user_id', userId).eq('provider', 'google').maybeSingle();
+    const response = await internalClient().from('calendar_integrations').select('*').eq('user_id', userId).eq('provider', 'google').maybeSingle();
+    const { data, error } = response as { data: { id: string; user_id: string; provider: string; refresh_token: string | null; access_token: string | null; token_expires_at: string | null; sync_enabled: boolean; calendar_id: string } | null; error: Error | null };
     dbError(error);
-    const connectionData = data as { id: string; user_id: string; provider: string; refresh_token: string | null; access_token: string | null; token_expires_at: string | null; sync_enabled: boolean; calendar_id: string } | null;
-    return connectionData;
+    return data;
   }
 
   async handleOAuthCallback(code: unknown, userId: string, state: unknown, redirectUri: unknown) {
@@ -180,9 +180,9 @@ export class GoogleCalendarService {
         if (pageToken) pages.add(pageToken);
       } while (pageToken);
     }
-    const { data, error } = await internalClient().rpc('import_calendar_events', { p_user_id: userId, p_integration_id: connection.id, p_events: [...events.values()] });
+    const { data, error } = await internalClient().rpc('import_calendar_events', { p_user_id: userId, p_integration_id: connection.id, p_events: [...events.values()] }) as { data: { synced: number; created: number; updated: number; deleted: number; errors: string[] } | null; error: Error | null };
     dbError(error);
-    return { message: 'Sync completed', ...data, total: events.size };
+    return { message: 'Sync completed', ...(data ?? {}), total: events.size };
   }
 
   async disconnect(userId: string) {

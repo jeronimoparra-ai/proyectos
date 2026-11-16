@@ -1,6 +1,5 @@
 import { supabase } from '../../database/supabase';
 import { aiService } from '../ai/ai.service';
-import type { AIExplanationResult } from '../ai/ai.service';
 
 interface FeedbackData {
   tasksCompleted: number;
@@ -51,7 +50,10 @@ export class FeedbackService {
     const topicsStudied = new Set<string>();
     (academicTasks ?? []).forEach((task) => {
       if (task.subject) topicsStudied.add(task.subject);
-      task.topics?.forEach((topic) => topicsStudied.add(topic.name));
+      task.topics?.forEach((topic) => {
+        const topicName = (topic as { name?: string }).name;
+        if (topicName) topicsStudied.add(topicName);
+      });
     });
 
     const { data: reviews } = await supabase
@@ -61,7 +63,7 @@ export class FeedbackService {
       .gte('created_at', weekAgo.toISOString());
 
     const totalSeconds = (reviews ?? []).reduce(
-      (sum, r) => sum + (r.time_spent_seconds ?? 0),
+      (sum, r) => sum + ((r as { time_spent_seconds?: number }).time_spent_seconds ?? 0),
       0
     );
     const studyHours = Math.round((totalSeconds / 3600) * 10) / 10;

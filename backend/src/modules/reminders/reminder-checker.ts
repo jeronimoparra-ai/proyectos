@@ -87,7 +87,7 @@ export function startReminderWorker(): void {
     } finally {
       batchCount = Math.max(0, batchCount - 1);
       if (!isStopping) {
-        void setTimeout(tick, CHECK_INTERVAL_MS);
+        setTimeout(tick, CHECK_INTERVAL_MS);
       }
     }
   };
@@ -114,7 +114,6 @@ export async function stopReminderWorker(graceMs: number = SHUTDOWN_GRACE_MS): P
   while (batchCount > 0 && Date.now() < deadline) {
     await sleep(100);
   }
-  // eslint-disable-next-line no-console
   console.log('Trabajador de recordatorios detenido.');
 }
 
@@ -145,11 +144,10 @@ async function claimDueReminders(): Promise<ClaimedReminder[]> {
     p_claim_ttl: CLAIM_TTL_SECONDS,
   }) as { data: ClaimedReminder[] | null; error: Error | null };
   if (error) {
-    // eslint-disable-next-line no-console
     console.error('Error RPC claim_due_reminders:', error.message);
     return [];
   }
-  return (data ?? []) as ClaimedReminder[];
+  return data ?? [];
 }
 
 async function processReminder(reminder: ClaimedReminder): Promise<void> {
@@ -227,7 +225,6 @@ async function scheduleRetry(reminderId: string, error: unknown): Promise<void> 
       retry_count: retryCount + 1,
     })
     .eq('id', reminderId);
-  // eslint-disable-next-line no-console, @typescript-eslint/restrict-template-expressions
   console.error(
     `Recordatorio ${reminderId} fallido (intento ${retryCount + 1}/${MAX_RETRY_ATTEMPTS}). Reintento en ${delay} ms: ${String(error)}`
   );

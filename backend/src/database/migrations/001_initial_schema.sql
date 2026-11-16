@@ -1,11 +1,10 @@
--- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 
 -- ============================================================
 -- CATEGORIES
 -- ============================================================
 CREATE TABLE categories (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name VARCHAR(100) NOT NULL,
   color VARCHAR(7) NOT NULL DEFAULT '#4A90D9',
@@ -38,7 +37,7 @@ CREATE POLICY "Users can delete own categories"
 -- TAGS
 -- ============================================================
 CREATE TABLE tags (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   name VARCHAR(50) NOT NULL,
   color VARCHAR(7) NOT NULL DEFAULT '#6B7280',
@@ -62,7 +61,7 @@ CREATE POLICY "Users can delete own tags"
 -- TASKS
 -- ============================================================
 CREATE TABLE tasks (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   title VARCHAR(255) NOT NULL,
   description TEXT,
@@ -130,7 +129,7 @@ CREATE POLICY "Users can manage own task_tags"
 -- SUBTASKS
 -- ============================================================
 CREATE TABLE subtasks (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
   title VARCHAR(255) NOT NULL,
   is_completed BOOLEAN DEFAULT FALSE,
@@ -154,7 +153,7 @@ CREATE POLICY "Users can manage own subtasks"
 -- EVENTS
 -- ============================================================
 CREATE TABLE events (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   title VARCHAR(255) NOT NULL,
   description TEXT,
@@ -198,7 +197,7 @@ CREATE POLICY "Users can delete own events"
 -- REMINDERS
 -- ============================================================
 CREATE TABLE reminders (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   remind_at TIMESTAMPTZ NOT NULL,
@@ -221,7 +220,7 @@ CREATE POLICY "Users can manage own reminders"
 -- ACADEMIC_TASKS
 -- ============================================================
 CREATE TABLE academic_tasks (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   task_id UUID REFERENCES tasks(id) ON DELETE SET NULL,
   title VARCHAR(255) NOT NULL,
@@ -264,7 +263,7 @@ CREATE POLICY "Users can delete own academic tasks"
 -- STUDY_MATERIALS
 -- ============================================================
 CREATE TABLE study_materials (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   academic_task_id UUID NOT NULL REFERENCES academic_tasks(id) ON DELETE CASCADE,
   type VARCHAR(20) NOT NULL CHECK (type IN ('text', 'pdf', 'image', 'link')),
   content TEXT NOT NULL,
@@ -291,7 +290,7 @@ CREATE POLICY "Users can manage own study materials"
 -- TOPICS
 -- ============================================================
 CREATE TABLE topics (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   academic_task_id UUID NOT NULL REFERENCES academic_tasks(id) ON DELETE CASCADE,
   name VARCHAR(255) NOT NULL,
   description TEXT,
@@ -316,7 +315,7 @@ CREATE POLICY "Users can manage own topics"
 -- REVIEWS (Spaced Repetition - SM-2)
 -- ============================================================
 CREATE TABLE reviews (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   academic_task_id UUID NOT NULL REFERENCES academic_tasks(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   quality INTEGER NOT NULL CHECK (quality BETWEEN 0 AND 5),
@@ -419,7 +418,7 @@ CREATE TRIGGER on_auth_user_created
 -- NOTIFICATIONS
 -- ============================================================
 CREATE TABLE notifications (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   title VARCHAR(255) NOT NULL,
   body TEXT NOT NULL,
@@ -454,7 +453,7 @@ CREATE POLICY "Users can delete own notifications"
 -- AI_INTERACTIONS
 -- ============================================================
 CREATE TABLE ai_interactions (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   model VARCHAR(100) NOT NULL,
   prompt TEXT NOT NULL,
@@ -480,7 +479,7 @@ CREATE POLICY "Users can insert own AI interactions"
 -- CALENDAR_INTEGRATIONS
 -- ============================================================
 CREATE TABLE calendar_integrations (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   provider VARCHAR(20) NOT NULL CHECK (provider IN ('google')),
   access_token TEXT NOT NULL,

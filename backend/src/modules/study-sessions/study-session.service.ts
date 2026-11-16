@@ -4,7 +4,7 @@ import type { CreateStudySessionInput, UpdateStudySessionInput } from './study-s
 
 export class StudySessionService {
   async createSession(userId: string, input: CreateStudySessionInput) {
-    const { data, error } = await supabase
+    const response = await supabase
       .from('study_sessions')
       .insert({
         user_id: userId,
@@ -18,24 +18,26 @@ export class StudySessionService {
       .select()
       .single();
 
+    const { data, error } = response as { data: { id: string; [key: string]: unknown } | null; error: Error | null };
+
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
-    const session = data as { id: string; [key: string]: unknown };
-    return session;
+    return data;
   }
 
   async getSessionById(userId: string, sessionId: string) {
-    const { data, error } = await supabase
+    const response = await supabase
       .from('study_sessions')
       .select('*')
       .eq('id', sessionId)
       .eq('user_id', userId)
       .single();
 
+    const { data, error } = response as { data: { id: string; [key: string]: unknown } | null; error: Error | null };
+
     if (error || !data) {
       throw createAppError('Study session not found', 404, 'SESSION_NOT_FOUND');
     }
-    const session = data as { id: string; [key: string]: unknown };
-    return session;
+    return data;
   }
 
   async listSessions(userId: string, academicTaskId?: string) {
@@ -51,8 +53,7 @@ export class StudySessionService {
 
     const { data, error } = await query;
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
-    const sessions = (data ?? []) as Array<{ id: string; [key: string]: unknown }>;
-    return sessions;
+    return (data ?? []) as Array<{ id: string; [key: string]: unknown }>;
   }
 
   async updateSession(userId: string, sessionId: string, input: UpdateStudySessionInput) {
@@ -67,7 +68,7 @@ export class StudySessionService {
       throw createAppError('Study session not found', 404, 'SESSION_NOT_FOUND');
     }
 
-    const { data, error } = await supabase
+    const response = await supabase
       .from('study_sessions')
       .update({
         ...input,
@@ -78,9 +79,10 @@ export class StudySessionService {
       .select()
       .single();
 
+    const { data, error } = response as { data: { id: string; [key: string]: unknown } | null; error: Error | null };
+
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
-    const updatedSession = data as { id: string; [key: string]: unknown };
-    return updatedSession;
+    return data;
   }
 
   async deleteSession(userId: string, sessionId: string) {

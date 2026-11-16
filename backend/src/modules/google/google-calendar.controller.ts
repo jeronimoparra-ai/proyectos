@@ -14,7 +14,7 @@ export class GoogleCalendarController {
 
   async handleCallback(req: Request, res: Response, next: NextFunction) {
     try {
-      const { code, state, redirectUri } = req.body ?? {};
+      const { code, state, redirectUri } = req.body as { code: unknown; state: unknown; redirectUri: unknown };
       const userId = (req as AuthenticatedRequest).userId!;
       const result = await googleCalendarService.handleOAuthCallback(code, userId, state, redirectUri);
       res.json(result);
