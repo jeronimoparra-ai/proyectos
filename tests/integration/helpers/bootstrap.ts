@@ -21,6 +21,7 @@ export const MIGRATION_FILES = [
   '007_reminder_worker.sql',
   '008_fix_handle_new_user.sql',
   '009_grant_table_privileges.sql',
+  '010_fix_task_soft_delete_rls.sql',
 ] as const;
 
 export async function resetPublicSchema(client: PoolClient | Pool): Promise<void> {
