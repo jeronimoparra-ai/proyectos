@@ -25,7 +25,7 @@ export class EventService {
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
     return {
-      events: data ?? [],
+      events: (data ?? []) as Array<{ id: string; [key: string]: unknown }>,
       total: count ?? 0,
       page: query.page,
       limit: query.limit,
@@ -45,7 +45,7 @@ export class EventService {
       throw createAppError('Event not found', 404, 'EVENT_NOT_FOUND');
     }
 
-    return data;
+    return data as { id: string; [key: string]: unknown };
   }
 
   async create(userId: string, input: CreateEventInput) {
@@ -57,7 +57,7 @@ export class EventService {
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
-    return data;
+    return data as { id: string; [key: string]: unknown };
   }
 
   async update(userId: string, eventId: string, input: UpdateEventInput) {
@@ -73,7 +73,7 @@ export class EventService {
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
-    return data;
+    return data as { id: string; [key: string]: unknown };
   }
 
   async softDelete(userId: string, eventId: string) {
@@ -102,7 +102,7 @@ export class EventService {
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
-    return data ?? [];
+    return (data ?? []) as Array<{ id: string; [key: string]: unknown }>;
   }
 
   /** @deprecated Use POST /google/sync: imported data must come from Google. */

@@ -91,9 +91,13 @@ export async function applyMigrations(
     }
   }
 
+  // La migración define el modelo de permisos (RLS y GRANT por tabla).
+  // El harness NO re-otorga privilegios a `authenticated`: eso anularía los
+  // REVOKE deliberados (p.ej. 005 calendar_oauth_states → 401/42501).
+  // Solo se garantiza service_role amplio como en Supabase.
   await client.query(`
-    GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated, service_role;
-    GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated, service_role;
+    GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
+    GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO service_role;
     GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO authenticated, service_role;
   `);
 }
