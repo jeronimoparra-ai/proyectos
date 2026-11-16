@@ -29,8 +29,19 @@ export async function hasCalendarPermission(): Promise<boolean> {
 
 export async function requestCalendarAccess(): Promise<boolean> {
   if (await hasCalendarPermission()) return true;
-  const result = await Calendar.requestCalendarPermissions();
-  return result.granted;
+
+  // En algunos dispositivos el dialogo de permisos se descarta (back/gesto) y
+  // la promesa nunca se resuelve: sin timeout la pantalla se queda en spinner.
+  const PERMISSION_TIMEOUT_MS = 12000;
+  const request = Calendar.requestCalendarPermissions().catch(() => null);
+  const timeout = new Promise<null>((resolve) => {
+    const timer = setTimeout(() => resolve(null), PERMISSION_TIMEOUT_MS);
+    void timer;
+  });
+  const result = await Promise.race([request, timeout]);
+
+  // Re-consultar el estado real: puede haberse concedido aunque el timeout ganara.
+  return result?.granted === true || (await hasCalendarPermission());
 }
 
 async function allCalendars(): Promise<Calendar.ExpoCalendar[]> {
