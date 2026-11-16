@@ -32,9 +32,6 @@ on:
     tags:
       - 'v*'
 
-permissions:
-  contents: write
-
 concurrency:
   group: build-apk
   cancel-in-progress: true
@@ -122,6 +119,9 @@ jobs:
   # APK: Solo arranca si validate es verde
   # ─────────────────────────────────────────────────────────────────────────
   apk:
+    # Solo el job que publica el APK necesita escribir en Releases.
+    permissions:
+      contents: write
     name: Android APK
     runs-on: ubuntu-24.04
     needs: [validate]
@@ -175,11 +175,12 @@ jobs:
           RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
         run: |
           set -eu
+          # Un APK sin firmar en la Release "oficial" es un problema de cadena de
+          # suministro: se aborta el build en vez de publicar algo que Android
+          # rechazará al instalar.
           if [ -z "${RELEASE_KEYSTORE_BASE64:-}" ] || [ -z "${RELEASE_KEYSTORE_PASSWORD:-}" ]; then
-            echo "::warning::RELEASE_KEYSTORE_BASE64 o RELEASE_KEYSTORE_PASSWORD no definidos;"
-            echo "::warning::generando APK sin firmar (solo para validación interna)."
-            echo "::warning::carga el secret RELEASE_KEYSTORE_BASE64|RELEASE_KEYSTORE_PASSWORD para distribución real."
-            exit 0
+            echo "::error::Faltan RELEASE_KEYSTORE_BASE64 o RELEASE_KEYSTORE_PASSWORD: no se publica un APK sin firmar."
+            exit 1
           fi
           cd android
           echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > release.keystore
@@ -210,6 +211,11 @@ jobs:
       - name: Build release APK
         working-directory: app/android
         run: ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: Limpiar keystore del runner
+        if: always()
+        working-directory: app/android
+        run: rm -f release.keystore
 
       - name: Stage artifact
         run: |

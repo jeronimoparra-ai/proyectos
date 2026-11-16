@@ -19,10 +19,19 @@ import { notificationRoutes } from './modules/notifications/notification.routes'
 
 const app = express();
 
+// Detras del proxy de Render/Vercel hay exactamente un salto: sin esto req.ip
+// es la IP del proxy y el rate limit por IP se vuelve un cubo global.
+app.set('trust proxy', 1);
+
 app.use(helmet());
-app.use(cors({ origin: env.corsOrigin, credentials: true }));
+// La autenticacion viaja en Authorization: Bearer, no en cookies, asi que no
+// se habilitan credenciales cross-origin.
+app.use(cors({ origin: env.corsOrigin, credentials: false }));
 app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
-app.use(express.json({ limit: '10mb' }));
+// El limite global es pequeno a proposito: se parsea ANTES del rate limit.
+app.use(express.json({ limit: '256kb' }));
+// Solo la IA recibe documentos largos (el schema ya limita a 200k caracteres).
+app.use('/api/ai', express.json({ limit: '1mb' }));
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -41,6 +50,12 @@ const authLimiter = rateLimit({
 });
 
 app.get('/health', (_req, res) => {
+  // Un /health que responde 200 sin poder autenticar hace que el proveedor
+  // marque el deploy como verde mientras la API esta inservible.
+  if (!process.env.SUPABASE_ANON_KEY && !process.env.SUPABASE_PUBLISHABLE_KEY) {
+    res.status(503).json({ status: 'degraded', missing: 'SUPABASE_ANON_KEY' });
+    return;
+  }
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 

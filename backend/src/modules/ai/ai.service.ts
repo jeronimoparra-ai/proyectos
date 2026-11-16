@@ -45,7 +45,7 @@ export class AIService {
           'X-Title': 'Productivity App',
         },
         body: JSON.stringify({
-          model: 'google/gemini-2.0-flash-001',
+          model: env.openrouterModel,
           messages,
           temperature: 0.3,
           max_tokens: 2000,
@@ -60,8 +60,10 @@ export class AIService {
     }
 
     if (!response.ok) {
-      const error = await response.text();
-      throw createAppError(`AI service error: ${error}`, 500, 'AI_SERVICE_ERROR');
+      // El cuerpo del proveedor puede incluir datos de la cuenta: solo al log.
+      const detail = await response.text();
+      console.error(`[AI] OpenRouter ${response.status}: ${detail.slice(0, 500)}`);
+      throw createAppError('AI service unavailable', 502, 'AI_SERVICE_ERROR');
     }
 
     const data = await response.json() as OpenRouterResponse;

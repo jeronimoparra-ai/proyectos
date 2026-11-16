@@ -9,6 +9,8 @@ export const env = {
   supabaseUrl: process.env.SUPABASE_URL ?? '',
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
   openrouterApiKey: process.env.OPENROUTER_API_KEY ?? '',
+  // Modelo de OpenRouter; configurable para no quedar clavados a uno retirado.
+  openrouterModel: process.env.OPENROUTER_MODEL ?? 'google/gemini-2.5-flash',
   corsOrigin: process.env.CORS_ORIGIN ?? 'http://localhost:8081',
   frontendUrl: process.env.FRONTEND_URL ?? 'http://localhost:8081',
   googleRedirectUri: process.env.GOOGLE_REDIRECT_URI ?? 'http://localhost:8081/',

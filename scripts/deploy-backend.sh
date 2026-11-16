@@ -35,24 +35,34 @@ payload=$(cat <<JSON
     { "key": "NODE_ENV", "value": "production" },
     { "key": "SUPABASE_URL", "value": "https://jfmydwshyvpplsxkrwns.supabase.co" },
     { "key": "SUPABASE_SERVICE_ROLE_KEY", "sync": false },
+    { "key": "SUPABASE_ANON_KEY", "sync": false },
     { "key": "OPENROUTER_API_KEY", "sync": false },
     { "key": "GOOGLE_CLIENT_ID", "sync": false },
     { "key": "GOOGLE_CLIENT_SECRET", "sync": false },
     { "key": "BRAVE_SEARCH_API_KEY", "sync": false },
     { "key": "EXPO_ACCESS_TOKEN", "sync": false },
-    { "key": "CORS_ORIGIN", "value": "http://localhost:8081" },
-    { "key": "FRONTEND_URL", "value": "http://localhost:8081" }
+    { "key": "CORS_ORIGIN", "sync": false },
+    { "key": "FRONTEND_URL", "sync": false },
+    { "key": "GOOGLE_REDIRECT_URI", "sync": false },
+    { "key": "OPENROUTER_MODEL", "value": "google/gemini-2.5-flash" }
   ]
 }
 JSON
 )
 
-response=$(curl -sS -X POST "https://api.render.com/v1/services" \
-  -H "Authorization: Bearer ${RENDER_API_KEY}" \
-  -H "Content-Type: application/json" \
-  -d "${payload}")
+# --fail-with-body: un 401/422 de Render ya no termina "en verde".
+# La API key viaja por un fd, no como argumento (no aparece en `ps`).
+response=$(curl -sS --fail-with-body -X POST "https://api.render.com/v1/services" \
+  -H @<(printf 'Authorization: Bearer %s\nContent-Type: application/json\n' "${RENDER_API_KEY}") \
+  -d "${payload}") || { echo "ERROR: Render rechazo la peticion (revisa RENDER_API_KEY/OWNER_ID)" >&2; exit 1; }
 
-echo "$response"
+printf '%s' "$response" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+s=d.get('service',{})
+print('servicio:', s.get('id'), s.get('name'))
+print('url:', (s.get('serviceDetails') or {}).get('url'))
+" 2>/dev/null || echo "Respuesta inesperada de Render"
 
 echo
 echo "→ Revisa el panel de Render para completar las variables 'sync: false'."

@@ -1,6 +1,6 @@
 /**
  * Bootstrap de Postgres desechable para tests de integración:
- * schema auth mínimo estilo Supabase + migraciones 001-007.
+ * schema auth mínimo estilo Supabase + migraciones 001-008.
  */
 
 import { readFile } from 'node:fs/promises';
@@ -19,6 +19,8 @@ export const MIGRATION_FILES = [
   '005_calendar_integrations_hardening.sql',
   '006_academic_sm2_atomic.sql',
   '007_reminder_worker.sql',
+  '008_fix_handle_new_user.sql',
+  '009_grant_table_privileges.sql',
 ] as const;
 
 export async function resetPublicSchema(client: PoolClient | Pool): Promise<void> {

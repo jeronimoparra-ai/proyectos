@@ -18,6 +18,8 @@ services:
         value: https://jfmydwshyvpplsxkrwns.supabase.co
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
       - key: OPENROUTER_API_KEY
         sync: false
       - key: GOOGLE_CLIENT_ID
@@ -28,12 +30,13 @@ services:
         sync: false
       - key: EXPO_ACCESS_TOKEN
         sync: false
-      # Orígenes permitidos: la app nativa no envía Origin, pero el panel web sí.
+      # Origen del panel web y redirect de Google: dependen del dominio real,
+      # por eso se piden en el panel y no se fijan en el repo.
       - key: CORS_ORIGIN
-        value: http://localhost:8081
+        sync: false
       - key: FRONTEND_URL
-        value: http://localhost:8081
-      # Se sobrescribe con la URL real del servicio tras el primer deploy
-      # (debe coincidir exactamente con el redirect registrado en Google Cloud).
+        sync: false
       - key: GOOGLE_REDIRECT_URI
-        value: http://localhost:8081/
+        sync: false
+      - key: OPENROUTER_MODEL
+        value: google/gemini-2.5-flash
