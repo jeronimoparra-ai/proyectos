@@ -15,7 +15,13 @@
  *   TEST_DB_PORT=5432 npx vitest run --config tests/integration/vitest.config.mts
  */
 
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
+
+// Anclados al config (independiente del CWD del job)
+const here = path.dirname(fileURLToPath(import.meta.url));
+
 
 export default defineConfig({
   test: {
@@ -24,8 +30,8 @@ export default defineConfig({
     // Run each file in its own worker to avoid cross-test pool leaks.
     pool: 'forks',
     maxWorkers: 1,
-    include: ['tests/integration/scenarios/**/*.test.ts'],
-    globalSetup: ['tests/integration/setup.ts'],
+    include: [path.join(here, 'scenarios/**/*.test.ts')],
+    globalSetup: [path.join(here, 'setup.ts')],
     // Individual scenarios that touch Postgres need enough time for schema setup.
     testTimeout: 60_000,
     hookTimeout: 120_000,

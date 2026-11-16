@@ -27,7 +27,7 @@ export class AuthService {
       user: {
         id: authData.user.id,
         email: authData.user.email!,
-        displayName: authData.user.user_metadata?.display_name ?? null,
+        displayName: (authData.user.user_metadata as Record<string, unknown> | undefined)?.display_name as string ?? null,
       },
       session: authData.session,
     };
@@ -47,7 +47,7 @@ export class AuthService {
       user: {
         id: authData.user.id,
         email: authData.user.email!,
-        displayName: authData.user.user_metadata?.display_name ?? null,
+        displayName: (authData.user.user_metadata as Record<string, unknown> | undefined)?.display_name as string ?? null,
       },
       session: authData.session,
     };
@@ -74,7 +74,7 @@ export class AuthService {
       user: {
         id: data.user.id,
         email: data.user.email!,
-        displayName: data.user.user_metadata?.display_name ?? null,
+        displayName: (data.user.user_metadata as Record<string, unknown> | undefined)?.display_name as string ?? null,
       },
     };
   }
@@ -118,7 +118,7 @@ export class AuthService {
       user: {
         id: data.user.id,
         email: data.user.email!,
-        displayName: data.user.user_metadata?.display_name ?? null,
+        displayName: (data.user.user_metadata as Record<string, unknown> | undefined)?.display_name as string ?? null,
       },
     };
   }

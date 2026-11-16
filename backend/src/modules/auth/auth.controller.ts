@@ -26,7 +26,6 @@ export class AuthController {
 
   async logout(req: Request, res: Response, next: NextFunction) {
     try {
-      const authReq = req as AuthenticatedRequest;
       const token = req.headers.authorization?.split(' ')[1] ?? '';
       const result = await authService.logout(token);
       res.json(result);
