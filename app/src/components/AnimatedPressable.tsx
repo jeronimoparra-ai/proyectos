@@ -19,6 +19,8 @@ export interface AnimatedPressableProps {
   scaleTo?: number;
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
+  // Estilo del Pressable exterior: util para layout (flex) sin animar el fondo.
+  containerStyle?: StyleProp<ViewStyle>;
   hitSlop?: Insets | number;
   accessible?: boolean;
   accessibilityRole?: AccessibilityRole;
@@ -34,6 +36,7 @@ export function AnimatedPressable({
   scaleTo = animation.scale.pressed,
   disabled = false,
   style,
+  containerStyle,
   hitSlop,
   accessible,
   accessibilityRole = 'button',
@@ -84,6 +87,7 @@ export function AnimatedPressable({
 
   return (
     <Pressable
+      style={containerStyle}
       onPress={onPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}

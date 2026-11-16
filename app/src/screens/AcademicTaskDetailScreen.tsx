@@ -91,7 +91,7 @@ export function AcademicTaskDetailScreen({ navigation, route }: Props) {
             style={styles.backRow}
             onPress={() => navigation.goBack()}
             accessibilityRole="button"
-            accessibilityLabel="Volver atrás"
+            accessibilityLabel="Go back"
           >
             <IconChevron direction="left" size={18} color={colors.primary} />
             <Text style={[styles.backButton, { color: colors.primary }]}>Back</Text>
@@ -108,7 +108,7 @@ export function AcademicTaskDetailScreen({ navigation, route }: Props) {
             style={[styles.actionButton, { backgroundColor: colors.primary, width: 140, alignSelf: 'center', marginTop: 16 }]}
             onPress={() => loadTask(taskId)}
             accessibilityRole="button"
-            accessibilityLabel="Reintentar carga de tarea"
+            accessibilityLabel="Retry loading task"
           >
             <Text style={styles.actionButtonText}>Retry</Text>
           </AnimatedPressable>

@@ -65,10 +65,10 @@ export function HomeScreen() {
       {!isLoading && !hasData ? (
         <FadeSlideIn index={1}>
           <View style={styles.empty}>
-            <IconEmptyState size={48} color={colors.primary} accessibilityLabel="No hay datos aún" />
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>No hay datos aún</Text>
+            <IconEmptyState size={48} color={colors.primary} accessibilityLabel="No content" />
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>Nothing here yet</Text>
             <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-              Desliza hacia abajo para actualizar o añade tareas y eventos para empezar.
+              Pull down to refresh, or add tasks and events to get started.
             </Text>
           </View>
         </FadeSlideIn>
@@ -113,7 +113,7 @@ export function HomeScreen() {
                     <Text style={[styles.reviewSubject, { color: colors.primary }]}>{task.subject}</Text>
                   )}
                 </View>
-                <IconChevron direction="right" size={16} color={colors.primary} accessibilityLabel="Ver reseña" />
+                <IconChevron direction="right" size={16} color={colors.primary} accessibilityLabel="View review" />
               </AnimatedPressable>
             ))}
             {dueReviews.length > 3 && (

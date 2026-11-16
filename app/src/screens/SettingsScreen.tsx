@@ -161,6 +161,7 @@ export function SettingsScreen() {
           {THEME_OPTIONS.map((option) => (
             <AnimatedPressable
               key={option.value}
+              containerStyle={{ flex: 1 }}
               style={[
                 styles.themeOption,
                 {
@@ -275,7 +276,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   themeOption: {
-    flex: 1,
     paddingVertical: 10,
     alignItems: 'center',
   },
