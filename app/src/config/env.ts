@@ -31,9 +31,9 @@ const KNOWN_PLACEHOLDERS = [
 
 const WARNINGS: Record<string, string> = {
   EXPO_PUBLIC_API_URL:
-    'EXPO_PUBLIC_API_URL no esta configurada. Se usa http://localhost:3000 por defecto, que no es alcanzable desde un dispositivo real.',
+    'EXPO_PUBLIC_API_URL is not configured. Falling back to http://localhost:3000, which is unreachable from a real device.',
   MISSING_SUPABASE:
-    'Variables de Supabase faltantes o con valor de ejemplo. Sin ellas la app no puede iniciar sesion ni cargar datos.',
+    'Supabase variables are missing or still use example values. Without them you cannot sign in or load data.',
 };
 
 // Devuelve true solo si el valor es una cadena real, no un marcador de plantilla.

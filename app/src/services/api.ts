@@ -3,7 +3,7 @@ const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 const DEFAULT_TIMEOUT_MS = 15000;
 
 export class ApiTimeoutError extends Error {
-  constructor(message = 'Sin conexión: el servidor tardó demasiado en responder') {
+  constructor(message = 'Connection failed: the server took too long to respond') {
     super(message);
     this.name = 'TimeoutError';
   }
