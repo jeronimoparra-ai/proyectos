@@ -35,7 +35,13 @@
         }
       ],
       "@react-native-community/datetimepicker",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Productivity needs calendar access to import events and add your tasks."
+        }
+      ]
     ],
     "extra": {
       "eas": {
