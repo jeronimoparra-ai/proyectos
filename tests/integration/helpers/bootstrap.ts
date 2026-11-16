@@ -108,16 +108,31 @@ export async function applyMigrations(
     GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated, service_role;
     GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO authenticated, service_role;
   `);
-  // Re-aplica los REVOKE deliberados de 005/007 (capacidades solo service_role)
+  // Re-aplica los REVOKE deliberados de 005/007 (capacidades solo service_role).
+  // Tolerante a estado intermedio: algunas migraciones aún no crearon estas
+  // tablas/funciones (p.ej. applyMigrations(['001']) solo aplica 001).
   await client.query(`
-    REVOKE ALL ON public.calendar_integrations FROM PUBLIC, anon, authenticated;
-    REVOKE ALL ON public.calendar_oauth_states FROM PUBLIC, anon, authenticated;
-  `);
-  await client.query(`
-    REVOKE EXECUTE ON FUNCTION public.import_calendar_events(uuid, uuid, jsonb) FROM PUBLIC, anon, authenticated;
-    REVOKE EXECUTE ON FUNCTION public.complete_calendar_connection(uuid, text, text, jsonb) FROM PUBLIC, anon, authenticated;
-    REVOKE EXECUTE ON FUNCTION public.disconnect_calendar(uuid) FROM PUBLIC, anon, authenticated;
-    REVOKE EXECUTE ON FUNCTION public.claim_due_reminders(text, integer, integer) FROM PUBLIC, anon, authenticated;
+    DO $$
+    BEGIN
+      IF to_regclass('public.calendar_integrations') IS NOT NULL THEN
+        EXECUTE 'REVOKE ALL ON public.calendar_integrations FROM PUBLIC, anon, authenticated';
+      END IF;
+      IF to_regclass('public.calendar_oauth_states') IS NOT NULL THEN
+        EXECUTE 'REVOKE ALL ON public.calendar_oauth_states FROM PUBLIC, anon, authenticated';
+      END IF;
+      IF to_regprocedure('public.import_calendar_events(uuid, uuid, jsonb)') IS NOT NULL THEN
+        EXECUTE 'REVOKE EXECUTE ON FUNCTION public.import_calendar_events(uuid, uuid, jsonb) FROM PUBLIC, anon, authenticated';
+      END IF;
+      IF to_regprocedure('public.complete_calendar_connection(uuid, text, text, jsonb)') IS NOT NULL THEN
+        EXECUTE 'REVOKE EXECUTE ON FUNCTION public.complete_calendar_connection(uuid, text, text, jsonb) FROM PUBLIC, anon, authenticated';
+      END IF;
+      IF to_regprocedure('public.disconnect_calendar(uuid)') IS NOT NULL THEN
+        EXECUTE 'REVOKE EXECUTE ON FUNCTION public.disconnect_calendar(uuid) FROM PUBLIC, anon, authenticated';
+      END IF;
+      IF to_regprocedure('public.claim_due_reminders(text, integer, integer)') IS NOT NULL THEN
+        EXECUTE 'REVOKE EXECUTE ON FUNCTION public.claim_due_reminders(text, integer, integer) FROM PUBLIC, anon, authenticated';
+      END IF;
+    END $$;
   `);
 }
 

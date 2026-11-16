@@ -125,6 +125,7 @@ export class ReminderService {
       .from('reminders')
       .update({ attempts: next, last_error: error })
       .eq('id', reminderId);
+    // eslint-disable-next-line no-console
     console.log('[worker] reminder.service incrementAttempts: reminderId:', reminderId, 'next:', next, 'updateError:', updateError?.message);
     if (updateError) throw createAppError(updateError.message, 500, 'DB_ERROR');
   }

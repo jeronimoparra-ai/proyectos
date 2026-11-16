@@ -1,5 +1,4 @@
 import { supabase } from '../../database/supabase';
-import { createAppError } from '../../middleware/error.middleware';
 import { aiService } from '../ai/ai.service';
 import type { AIExplanationResult } from '../ai/ai.service';
 

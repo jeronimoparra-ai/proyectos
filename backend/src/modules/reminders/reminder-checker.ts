@@ -144,8 +144,9 @@ async function claimDueReminders(): Promise<ClaimedReminder[]> {
     p_locked_by: WORKER_ID,
     p_limit: BATCH_SIZE,
     p_claim_ttl: CLAIM_TTL_SECONDS,
-  });
+  }) as { data: ClaimedReminder[] | null; error: Error | null };
   if (error) {
+    // eslint-disable-next-line no-console
     console.error('Error RPC claim_due_reminders:', error.message);
     return [];
   }
@@ -227,7 +228,8 @@ async function scheduleRetry(reminderId: string, error: unknown): Promise<void> 
       retry_count: retryCount + 1,
     })
     .eq('id', reminderId);
+  // eslint-disable-next-line no-console, @typescript-eslint/restrict-template-expressions
   console.error(
-    `Recordatorio ${reminderId} fallido (intento ${retryCount + 1}/${MAX_RETRY_ATTEMPTS}). Reintento en ${delay} ms: ${error}`
+    `Recordatorio ${reminderId} fallido (intento ${retryCount + 1}/${MAX_RETRY_ATTEMPTS}). Reintento en ${delay} ms: ${String(error)}`
   );
 }
