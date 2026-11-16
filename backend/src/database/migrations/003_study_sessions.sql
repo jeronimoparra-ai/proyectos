@@ -2,7 +2,7 @@
 -- STUDY_SESSIONS - Registro de sesiones de estudio
 -- ============================================================
 CREATE TABLE IF NOT EXISTS study_sessions (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   academic_task_id UUID REFERENCES academic_tasks(id) ON DELETE SET NULL,
   topic_id UUID REFERENCES topics(id) ON DELETE SET NULL,

@@ -52,7 +52,7 @@ export class ReminderService {
       throw createAppError('Task not found', 404, 'TASK_NOT_FOUND');
     }
 
-    const { data, error } = await supabase
+    const response = await supabase
       .from('reminders')
       .insert({
         task_id: input.task_id,
@@ -63,10 +63,11 @@ export class ReminderService {
       .select()
       .single();
 
+    const { data, error } = response as { data: { id: string; [key: string]: unknown } | null; error: Error | null };
+
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
-    const createdReminder = data as { id: string; [key: string]: unknown };
-    return createdReminder;
+    return data as { id: string; [key: string]: unknown };
   }
 
   async update(userId: string, reminderId: string, input: UpdateReminderInput) {
@@ -81,7 +82,7 @@ export class ReminderService {
       throw createAppError('Reminder not found', 404, 'REMINDER_NOT_FOUND');
     }
 
-    const { data, error } = await supabase
+    const response = await supabase
       .from('reminders')
       .update(input)
       .eq('id', reminderId)
@@ -89,10 +90,11 @@ export class ReminderService {
       .select()
       .single();
 
+    const { data, error } = response as { data: { id: string; [key: string]: unknown } | null; error: Error | null };
+
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
-    const updatedReminder = data as { id: string; [key: string]: unknown };
-    return updatedReminder;
+    return data as { id: string; [key: string]: unknown };
   }
 
   async delete(userId: string, reminderId: string) {
@@ -124,12 +126,11 @@ export class ReminderService {
       .eq('id', reminderId)
       .single();
     if (getError) throw createAppError(getError.message, 500, 'DB_ERROR');
-    const next = (data?.attempts ?? 0) + 1;
+    const next = ((data as { attempts?: number } | null)?.attempts ?? 0) + 1;
     const { error: updateError } = await supabase
       .from('reminders')
       .update({ attempts: next, last_error: error })
       .eq('id', reminderId);
-    // eslint-disable-next-line no-console
     console.log('[worker] reminder.service incrementAttempts: reminderId:', reminderId, 'next:', next, 'updateError:', updateError?.message);
     if (updateError) throw createAppError(updateError.message, 500, 'DB_ERROR');
   }

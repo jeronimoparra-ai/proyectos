@@ -14,7 +14,7 @@ export class AcademicTaskController {
       const userId = (req as AuthenticatedRequest).userId!;
       const result = await academicTaskService.list(
         userId,
-        parseQuery<AcademicTaskQueryInput>(req.query as Record<string, unknown>)
+        parseQuery<AcademicTaskQueryInput>(req.query)
       );
       res.json(result);
     } catch (error) {

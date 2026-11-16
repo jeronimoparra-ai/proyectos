@@ -39,7 +39,7 @@ export class TaskService {
   }
 
   async getById(userId: string, taskId: string) {
-    const { data, error } = await supabase
+    const response = await supabase
       .from('tasks')
       .select(`
         *,
@@ -53,22 +53,25 @@ export class TaskService {
       .is('deleted_at', null)
       .single();
 
+    const { data, error } = response as { data: { id: string; [key: string]: unknown } | null; error: Error | null };
+
     if (error || !data) {
       throw createAppError('Task not found', 404, 'TASK_NOT_FOUND');
     }
 
-    const task = data as { id: string; [key: string]: unknown };
-    return task;
+    return data as { id: string; [key: string]: unknown };
   }
 
   async create(userId: string, input: CreateTaskInput) {
     const { tags, ...taskData } = input;
 
-    const { data, error } = await supabase
+    const response = await supabase
       .from('tasks')
       .insert({ ...taskData, user_id: userId })
       .select()
       .single();
+
+    const { data, error } = response as { data: { id: string; [key: string]: unknown } | null; error: Error | null };
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
@@ -86,8 +89,7 @@ export class TaskService {
       if (tagError) throw createAppError(tagError.message, 500, 'DB_ERROR');
     }
 
-    const createdTask = data as { id: string; [key: string]: unknown };
-    return createdTask;
+    return data as { id: string; [key: string]: unknown };
   }
 
   async update(userId: string, taskId: string, input: UpdateTaskInput) {
@@ -95,13 +97,15 @@ export class TaskService {
 
     const { tags, ...updateData } = input;
 
-    const { data, error } = await supabase
+    const response = await supabase
       .from('tasks')
       .update(updateData)
       .eq('id', taskId)
       .eq('user_id', userId)
       .select()
       .single();
+
+    const { data, error } = response as { data: { id: string; [key: string]: unknown } | null; error: Error | null };
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
@@ -125,8 +129,7 @@ export class TaskService {
       }
     }
 
-    const updatedTask = data as { id: string; [key: string]: unknown };
-    return updatedTask;
+    return data as { id: string; [key: string]: unknown };
   }
 
   async softDelete(userId: string, taskId: string) {

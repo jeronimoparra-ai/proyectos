@@ -7,10 +7,10 @@ import { getStringParam, parseQuery } from '../../utils/helpers';
 export class TaskController {
   async list(req: Request, res: Response, next: NextFunction) {
     try {
-      const authReq = req as AuthenticatedRequest;
+      const userId = (req as AuthenticatedRequest).userId!;
       const result = await taskService.list(
-        authReq.userId!,
-        parseQuery<TaskQueryInput>(req.query as Record<string, unknown>)
+        userId,
+        parseQuery<TaskQueryInput>(req.query)
       );
       res.json(result);
     } catch (error) {

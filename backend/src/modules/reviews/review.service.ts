@@ -108,7 +108,7 @@ export class ReviewService {
     }).length;
 
     // Use total_reviews for historical count, review_count for SM-2 streak
-    const totalReviews = (tasks ?? []).reduce((sum, t) => sum + (t.total_reviews ?? 0), 0);
+    const totalReviews = (tasks ?? []).reduce((sum, t) => sum + ((t as { total_reviews?: number }).total_reviews ?? 0), 0);
 
     const { count: totalTasks } = await supabase
       .from('academic_tasks')

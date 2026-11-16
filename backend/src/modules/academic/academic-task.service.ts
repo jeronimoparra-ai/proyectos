@@ -35,7 +35,7 @@ export class AcademicTaskService {
   }
 
   async getById(userId: string, taskId: string) {
-    const { data, error } = await supabase
+    const response = await supabase
       .from('academic_tasks')
       .select('*, study_materials (*), topics (*)')
       .eq('id', taskId)
@@ -43,12 +43,13 @@ export class AcademicTaskService {
       .is('deleted_at', null)
       .single();
 
+    const { data, error } = response as { data: { id: string; content?: string; study_materials?: Array<{ type: string; content: string }>; [key: string]: unknown } | null; error: Error | null };
+
     if (error || !data) {
       throw createAppError('Academic task not found', 404, 'ACADEMIC_TASK_NOT_FOUND');
     }
 
-    const typedData = data as { id: string; content?: string; study_materials?: Array<{ type: string; content: string }>; [key: string]: unknown };
-    return typedData;
+    return data;
   }
 
   async create(userId: string, input: CreateAcademicTaskInput) {
@@ -70,14 +71,13 @@ export class AcademicTaskService {
       throw createAppError('Failed to create academic task', 500, 'DB_ERROR');
     }
 
-    const createdTask = data[0] as { id: string; [key: string]: unknown };
-    return createdTask;
+    return data[0];
   }
 
   async update(userId: string, taskId: string, input: UpdateAcademicTaskInput) {
     await this.getById(userId, taskId);
 
-    const { data, error } = await supabase
+    const response = await supabase
       .from('academic_tasks')
       .update(input)
       .eq('id', taskId)
@@ -85,10 +85,11 @@ export class AcademicTaskService {
       .select()
       .single();
 
+    const { data, error } = response as { data: { id: string; [key: string]: unknown } | null; error: Error | null };
+
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
-    const updatedTask = data as { id: string; [key: string]: unknown };
-    return updatedTask;
+    return data as { id: string; [key: string]: unknown };
   }
 
   async softDelete(userId: string, taskId: string) {

@@ -85,7 +85,7 @@ BEGIN
   VALUES(p_user_id, 'google', p_tokens->>'access_token', p_tokens->>'refresh_token',
     (p_tokens->>'token_expires_at')::timestamptz, 'primary', true)
   ON CONFLICT (user_id, provider) DO UPDATE SET
-    id = uuid_generate_v4(), access_token = EXCLUDED.access_token, refresh_token = EXCLUDED.refresh_token,
+    id = gen_random_uuid(), access_token = EXCLUDED.access_token, refresh_token = EXCLUDED.refresh_token,
     token_expires_at = EXCLUDED.token_expires_at, calendar_id = EXCLUDED.calendar_id,
     sync_enabled = true, last_synced_at = NULL;
 END;

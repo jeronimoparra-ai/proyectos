@@ -45,7 +45,7 @@ export class AuthController {
 
   async refreshToken(req: Request, res: Response, next: NextFunction) {
     try {
-      const { refresh_token } = req.body;
+      const { refresh_token } = req.body as { refresh_token: string };
       const result = await authService.refreshToken(refresh_token);
       res.json(result);
     } catch (error) {
@@ -65,7 +65,8 @@ export class AuthController {
 
   async updateProfile(req: Request, res: Response, next: NextFunction) {
     try {
-      const result = await authService.updateProfile(req.body);
+      const updates = req.body as { displayName?: string };
+      const result = await authService.updateProfile(updates);
       res.json(result);
     } catch (error) {
       next(error);

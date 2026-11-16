@@ -33,7 +33,7 @@ export class EventService {
   }
 
   async getById(userId: string, eventId: string) {
-    const { data, error } = await supabase
+    const response = await supabase
       .from('events')
       .select('*, categories (*)')
       .eq('id', eventId)
@@ -41,31 +41,33 @@ export class EventService {
       .is('deleted_at', null)
       .single();
 
+    const { data, error } = response as { data: { id: string; [key: string]: unknown } | null; error: Error | null };
+
     if (error || !data) {
       throw createAppError('Event not found', 404, 'EVENT_NOT_FOUND');
     }
 
-    const event = data as { id: string; [key: string]: unknown };
-    return event;
+    return data;
   }
 
   async create(userId: string, input: CreateEventInput) {
-    const { data, error } = await supabase
+    const response = await supabase
       .from('events')
       .insert({ ...input, user_id: userId })
       .select()
       .single();
 
+    const { data, error } = response as { data: { id: string; [key: string]: unknown } | null; error: Error | null };
+
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
-    const createdEvent = data as { id: string; [key: string]: unknown };
-    return createdEvent;
+    return data as { id: string; [key: string]: unknown };
   }
 
   async update(userId: string, eventId: string, input: UpdateEventInput) {
     await this.getById(userId, eventId);
 
-    const { data, error } = await supabase
+    const response = await supabase
       .from('events')
       .update(input)
       .eq('id', eventId)
@@ -73,10 +75,11 @@ export class EventService {
       .select()
       .single();
 
+    const { data, error } = response as { data: { id: string; [key: string]: unknown } | null; error: Error | null };
+
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
-    const updatedEvent = data as { id: string; [key: string]: unknown };
-    return updatedEvent;
+    return data as { id: string; [key: string]: unknown };
   }
 
   async softDelete(userId: string, eventId: string) {
@@ -112,7 +115,7 @@ export class EventService {
   async syncFromGoogle(userId: string, _legacyEvents?: unknown) {
     const { googleCalendarService } = await import('../google/google-calendar.service');
     const result = await googleCalendarService.syncEvents(userId);
-    return result;
+    return result as { synced: number; created: number; updated: number; deleted: number; errors: string[] };
   }
 }
 

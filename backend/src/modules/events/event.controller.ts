@@ -7,9 +7,10 @@ import { getStringParam, parseQuery } from '../../utils/helpers';
 export class EventController {
   async list(req: Request, res: Response, next: NextFunction) {
     try {
+      const userId = (req as AuthenticatedRequest).userId!;
       const result = await eventService.list(
-        (req as AuthenticatedRequest).userId!,
-        parseQuery<EventQueryInput>(req.query as Record<string, unknown>)
+        userId,
+        parseQuery<EventQueryInput>(req.query)
       );
       res.json(result);
     } catch (error) {
@@ -71,7 +72,8 @@ export class EventController {
   async syncFromGoogle(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = (req as AuthenticatedRequest).userId!;
-      const result = await eventService.syncFromGoogle(userId, req.body.events);
+      const events = (req.body as { events?: unknown }).events;
+      const result = await eventService.syncFromGoogle(userId, events);
       res.json(result);
     } catch (error) {
       next(error);
