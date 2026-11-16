@@ -17,6 +17,7 @@ import { GoogleCalendarSection } from '../components/calendar/GoogleCalendarSect
 import { AnimatedPressable } from '../components/AnimatedPressable';
 import { FadeSlideIn } from '../components/FadeSlideIn';
 import { IconBell } from '../components/icons';
+import { DeviceCalendarSection } from '../components/calendar/DeviceCalendarSection';
 import type { ColorScheme } from '../types';
 
 const THEME_OPTIONS: { label: string; value: ColorScheme }[] = [
@@ -201,6 +202,8 @@ export function SettingsScreen() {
           Push notifications are enabled for reminders and tasks
         </Text>
       </View>
+
+      <DeviceCalendarSection />
 
       <GoogleCalendarSection />
 
