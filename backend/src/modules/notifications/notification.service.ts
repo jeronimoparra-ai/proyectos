@@ -353,7 +353,7 @@ export class NotificationService {
       .eq('active', true);
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
-    return (data ?? []).map((t) => t.token);
+    return (data ?? []).map((t: { token: string }) => t.token);
   }
 
   async listNotifications(userId: string, limit: number = 50) {

@@ -88,7 +88,7 @@ export function startReminderWorker(): void {
     } finally {
       batchCount = Math.max(0, batchCount - 1);
       if (!isStopping) {
-        intervalId = setTimeout(tick, CHECK_INTERVAL_MS);
+        void setTimeout(tick, CHECK_INTERVAL_MS);
       }
     }
   };
@@ -115,6 +115,7 @@ export async function stopReminderWorker(graceMs: number = SHUTDOWN_GRACE_MS): P
   while (batchCount > 0 && Date.now() < deadline) {
     await sleep(100);
   }
+  // eslint-disable-next-line no-console
   console.log('Trabajador de recordatorios detenido.');
 }
 
