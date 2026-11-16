@@ -144,12 +144,14 @@ export async function prepareCleanDatabase(client: PoolClient | Pool): Promise<v
 
 /** Actúa como usuario autenticado (RLS) dentro de la sesión actual. */
 export async function asUser(client: PoolClient, userId: string): Promise<void> {
-  await client.query(`SELECT set_config('request.jwt.claim.sub', $1, true)`, [userId]);
-  await client.query(`SET LOCAL ROLE authenticated`);
+  // is_local=false => la asignación persiste mientras dure la conexión,
+  // no sólo en la transacción actual (queries en autocommit se ven).
+  await client.query(`SELECT set_config('request.jwt.claim.sub', $1, false)`, [userId]);
+  await client.query(`SET ROLE authenticated`);
 }
 
 export async function asServiceRole(client: PoolClient): Promise<void> {
-  await client.query(`SET LOCAL ROLE service_role`);
+  await client.query(`SET ROLE service_role`);
 }
 
 export async function insertAuthUser(

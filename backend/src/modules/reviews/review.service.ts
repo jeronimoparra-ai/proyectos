@@ -12,7 +12,7 @@ export class ReviewService {
       p_difficulty: input.difficulty ?? null,
       p_time_spent_seconds: input.time_spent_seconds ?? null,
       p_idempotency_key: input.idempotency_key ?? null,
-    });
+    }) as { data: Array<{ review_id: string; quality: number; difficulty: number | null; time_spent_seconds: number | null; ease_factor: number; interval: number; repetitions: number; next_review_at: string; created_at: string; is_duplicate: boolean; sm2_repetitions: number; total_reviews: number }> | null; error: { code: string; message: string } | null };
 
     if (error) {
       // Handle specific error codes
