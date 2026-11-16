@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
   },
   editButton: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 11,
     minWidth: 60,
     alignItems: 'center',
   },

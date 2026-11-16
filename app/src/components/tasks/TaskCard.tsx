@@ -54,6 +54,7 @@ export function TaskCard({ task, onPress, onComplete }: TaskCardProps) {
               },
             ]}
             onPress={() => onComplete(task)}
+            hitSlop={{ top: 11, bottom: 11, left: 11, right: 11 }}
           >
             {task.status === 'completed' && (
               <Text style={styles.checkmark}>✓</Text>

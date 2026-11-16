@@ -72,6 +72,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
                 backgroundColor: colors.surfaceVariant,
                 color: colors.text,
                 borderColor: colors.border,
+                borderRadius: borderRadius.md,
               }]}
               value={email}
               onChangeText={setEmail}
@@ -90,6 +91,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
                 backgroundColor: colors.surfaceVariant,
                 color: colors.text,
                 borderColor: colors.border,
+                borderRadius: borderRadius.md,
               }]}
               value={password}
               onChangeText={setPassword}
@@ -172,6 +174,7 @@ const styles = StyleSheet.create({
   },
   forgotPassword: {
     alignSelf: 'flex-end',
+    paddingVertical: 8,
   },
   forgotPasswordText: {
     fontSize: 14,
