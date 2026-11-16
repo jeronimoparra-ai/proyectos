@@ -13,7 +13,7 @@ export class ReminderService {
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
-    return data ?? [];
+    return (data ?? []) as Array<{ id: string; [key: string]: unknown }>;
   }
 
   async listUpcoming(userId: string, days: number = 7) {
@@ -35,7 +35,7 @@ export class ReminderService {
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
-    return data ?? [];
+    return (data ?? []) as Array<{ id: string; [key: string]: unknown }>;
   }
 
   async create(userId: string, input: CreateReminderInput) {
@@ -63,7 +63,7 @@ export class ReminderService {
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
-    return data;
+    return data as { id: string; [key: string]: unknown };
   }
 
   async update(userId: string, reminderId: string, input: UpdateReminderInput) {
@@ -88,7 +88,7 @@ export class ReminderService {
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
-    return data;
+    return data as { id: string; [key: string]: unknown };
   }
 
   async delete(userId: string, reminderId: string) {

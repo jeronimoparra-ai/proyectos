@@ -1,72 +1,89 @@
 /**
- * Plantilla base: Fixture de fallo en revisión académica (SM-2)
- * NO IMPLEMENTAR - Esta es una plantilla para que los equipos T1-T5 la extiendan
+ * Fixture de fallo en revisión/creación académica (SM-2)
  *
- * Objetivo: Simular y verificar comportamiento ante fallos en el algoritmo
- * de repetición espaciada SM-2 y endpoints de reviews.
+ * Objetivo: verificar que `create_academic_task_atomic` (y utilidades de
+ * revisión) son ALL-OR-NOTHING — cualquier fallo interno no persiste
+ * escritura parcial.
+ *
+ * Alcance de la "transacción": función RPC completa — si algo falla,
+ * la llamada entera se deshace.
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { apiClient } from '../helpers/api-client';
-import { createAuthenticatedTestUser, createTestAcademicTask, clearApiClientAuth } from '../helpers/auth';
-import { closeTestPool } from '../helpers/db';
+import { closeTestPool, getTestPool, grantRoleMembership } from '../helpers/db';
+import { prepareCleanDatabase, insertAuthUser, asUser } from '../helpers/bootstrap';
 
-describe('Academic Review Failure Fixtures - Plantilla Base', () => {
-  let user: Awaited<ReturnType<typeof createAuthenticatedTestUser>>;
-  let academicTaskId: string;
+describe('Academic Failure Fixtures (rollback atómico)', () => {
+  const pool = getTestPool();
+  let userId = '';
 
   beforeAll(async () => {
-    user = await createAuthenticatedTestUser();
-    apiClient.setAuthTokens(user.tokens!);
-    academicTaskId = await createTestAcademicTask(user.id);
-  });
+    const client = await pool.connect();
+    try {
+      await prepareCleanDatabase(client);
+      await grantRoleMembership(client);
+      userId = await insertAuthUser(client, 'academic-fail@example.com');
+    } finally {
+      client.release();
+    }
+  }, 120_000);
 
   afterAll(async () => {
-    clearApiClientAuth();
     await closeTestPool();
   });
 
-  it('Review con quality inválido (>5 o <0) rechaza request', async () => {
-    // TODO T1-T5: Implementar
-    // POST /api/reviews con quality: 6 -> 400
-    // POST /api/reviews con quality: -1 -> 400
-    expect(true).toBe(true);
+  it('create_academic_task_atomic revierte TODO en fallo (ni tarea, ni material)', async () => {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await asUser(client, userId);
+
+      // Materia con tipo inválido: viola study_materials_type_check.
+      const bogusMaterials = JSON.stringify([
+        { type: 'bogus-materia', content: 'contenido que nunca debe persistir' },
+      ]);
+
+      await expect(
+        client.query(
+          `SELECT * FROM create_academic_task_atomic($1, 'Tarea fallida', 'Biología', 'contenido', $2::jsonb)`,
+          [userId, bogusMaterials]
+        )
+      ).rejects.toThrow(/check|violates/i);
+
+      // Nada persistido: ni la tarea, ni los materiales.
+      const tasks = await client.query<{ c: number }>('SELECT COUNT(*)::int AS c FROM academic_tasks');
+      const materials = await client.query<{ c: number }>(
+        'SELECT COUNT(*)::int AS c FROM study_materials'
+      );
+      expect(tasks.rows[0].c).toBe(0);
+      expect(materials.rows[0].c).toBe(0);
+
+      await client.query('ROLLBACK');
+    } finally {
+      client.release();
+    }
   });
 
-  it('Review para academic_task inexistente retorna 404', async () => {
-    // TODO T1-T5: Implementar
-    // POST /api/reviews con academic_task_id UUID aleatorio -> 404
-    expect(true).toBe(true);
-  });
+  it('create_academic_task_atomic con user scope-mismatch rechaza sin escribir', async () => {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await asUser(client, userId);
 
-  it('Review para academic_task de otro usuario retorna 403/404', async () => {
-    // TODO T1-T5: Implementar
-    // Crear usuario B, intentar review task de usuario A -> 403/404
-    expect(true).toBe(true);
-  });
+      const otherId = '00000000-0000-4000-8000-000000000001';
+      await expect(
+        client.query(
+          `SELECT create_academic_task_atomic($1, 'Tarea ajena', 'Biología', 'x', '[]'::jsonb)`,
+          [otherId]
+        )
+      ).rejects.toThrow(/scope mismatch|42501|not allowed/i);
 
-  it('Cálculo SM-2 con parámetros edge case (ease_factor mínimo)', async () => {
-    // TODO T1-T5: Implementar
-    // Verificar que ease_factor no baja de 1.3
-    // Verificar interval calculation con ease_factor = 1.3
-    expect(true).toBe(true);
-  });
+      const tasks = await client.query<{ c: number }>('SELECT COUNT(*)::int AS c FROM academic_tasks');
+      expect(tasks.rows[0].c).toBe(0);
 
-  it('Reviews concurrentes para misma task: race condition handling', async () => {
-    // TODO T1-T5: Implementar
-    // Dos requests POST /api/reviews simultáneos para misma task
-    // Verificar consistencia (última gana, o merge apropiado)
-    expect(true).toBe(true);
-  });
-
-  it('getDueReviews con BD vacía retorna array vacío', async () => {
-    // TODO T1-T5: Implementar
-    expect(true).toBe(true);
-  });
-
-  it('next_review_at se actualiza correctamente tras review', async () => {
-    // TODO T1-T5: Implementar
-    // POST review -> GET academic_task -> verificar next_review_at = ahora + interval
-    expect(true).toBe(true);
+      await client.query('ROLLBACK');
+    } finally {
+      client.release();
+    }
   });
 });

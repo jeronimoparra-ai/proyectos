@@ -81,6 +81,14 @@ export async function applyMigrations(
   client: PoolClient | Pool,
   files: readonly string[] = MIGRATION_FILES
 ): Promise<void> {
+  // Concesión amplia ANTES de las migraciones: las migraciones definen
+  // las RLS y los REVOKE específicos (p.ej. 005 → calendar_oauth_states
+  // queda service_role only). Si se re-concede después, anula esos REVOKE.
+  await client.query(`
+    GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated, service_role;
+    GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated, service_role;
+    GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO authenticated, service_role;
+  `);
   for (const file of files) {
     const sql = await readFile(path.join(MIGRATIONS_DIR, file), 'utf8');
     try {
@@ -94,13 +102,7 @@ export async function applyMigrations(
   // La migración define el modelo de permisos (RLS y GRANT por tabla).
   // El harness NO re-otorga privilegios a `authenticated`: eso anularía los
   // REVOKE deliberados (p.ej. 005 calendar_oauth_states → 401/42501).
-  // Solo se garantiza service_role amplio como en Supabase.
-  await client.query(`
-    GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
-    GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO service_role;
-    GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO authenticated, service_role;
-  `);
-}
+  // Solo se garantiza service_role amplio como en Supabase.}
 
 export async function prepareCleanDatabase(client: PoolClient | Pool): Promise<void> {
   await resetPublicSchema(client);

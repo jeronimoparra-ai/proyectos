@@ -48,7 +48,7 @@ export class NotificationService {
       .single();
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
-    return notification;
+    return notification as { id: string; [key: string]: unknown };
   }
 
   // --- ENVÍO hacia Expo con timeout y manejo por token ---------------
@@ -365,7 +365,7 @@ export class NotificationService {
       .limit(limit);
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
-    return data ?? [];
+    return (data ?? []) as Array<{ id: string; [key: string]: unknown }>;
   }
 
   async markAsRead(userId: string, notificationId: string) {

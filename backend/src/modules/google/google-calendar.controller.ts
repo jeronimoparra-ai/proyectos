@@ -33,8 +33,7 @@ export class GoogleCalendarController {
 
   async disconnect(req: Request, res: Response, next: NextFunction) {
     try {
-      const authReq = req as AuthenticatedRequest;
-      const result = await googleCalendarService.disconnect(authReq.userId!);
+      const result = await googleCalendarService.disconnect((req as AuthenticatedRequest).userId!);
       res.json(result);
     } catch (error) {
       next(error);
@@ -43,8 +42,7 @@ export class GoogleCalendarController {
 
   async checkConnection(req: Request, res: Response, next: NextFunction) {
     try {
-      const authReq = req as AuthenticatedRequest;
-      const connected = await googleCalendarService.isConnected(authReq.userId!);
+      const connected = await googleCalendarService.isConnected((req as AuthenticatedRequest).userId!);
       res.json({ connected });
     } catch (error) {
       next(error);

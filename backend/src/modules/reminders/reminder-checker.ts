@@ -1,6 +1,7 @@
 import { createReminderCheckerClient, runWithSystemUser } from '../../database/supabase';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { notificationService } from '../notifications/notification.service';
+import type { TokenResult } from '../notifications/notification.service';
 
 // Solo el worker interno puede usar este cliente con service_role (sin contexto de petición).
 // Lazy: se crea en el arranque del worker, nunca al importar el módulo.
@@ -53,12 +54,6 @@ interface ClaimedReminder {
   task_priority: string | null;
 }
 
-interface TokenResult {
-  token: string;
-  success: boolean;
-  error: string | null;
-  messageId: string | null;
-}
 
 // ---------------------------------------------------------------
 // Lifecycle: arranque y parada ordenada del trabajador.
@@ -175,7 +170,7 @@ async function processReminder(reminder: ClaimedReminder): Promise<void> {
         reminder.remind_at,
         data
       )
-    );
+    ) as { notification: { id: string } | null; tokenResults: TokenResult[]; delivered: boolean };
 
     // 2) Si la entrega se registró sobre el aviso, marcar el recordatorio
     //    como sent (no volverá a ser reclamado).
