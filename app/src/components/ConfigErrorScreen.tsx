@@ -73,15 +73,16 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#e74c3c',
+    color: '#ff6b6b',
     marginBottom: 8,
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: 14,
-    color: '#aaa',
+    fontSize: 15,
+    color: '#c8ccd4',
     textAlign: 'center',
     marginBottom: 24,
-    lineHeight: 20,
+    lineHeight: 22,
   },
   section: {
     width: '100%',
@@ -90,7 +91,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: '#e8eaf0',
     marginBottom: 8,
   },
   varItem: {
@@ -100,24 +101,24 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   varName: {
-    color: '#e74c3c',
+    color: '#ff6b6b',
     fontFamily: 'monospace',
     fontSize: 13,
   },
   warning: {
-    color: '#f39c12',
+    color: '#fbbf24',
     fontSize: 13,
-    lineHeight: 18,
+    lineHeight: 20,
     marginBottom: 4,
   },
   instruction: {
-    color: '#ccc',
+    color: '#c8ccd4',
     fontSize: 13,
-    lineHeight: 20,
+    lineHeight: 22,
     marginBottom: 6,
   },
   code: {
     fontFamily: 'monospace',
-    color: '#3498db',
+    color: '#7ab3ef',
   },
 });

@@ -95,6 +95,7 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordScreenProps) 
                 backgroundColor: colors.surfaceVariant,
                 color: colors.text,
                 borderColor: colors.border,
+                borderRadius: borderRadius.md,
               }]}
               value={email}
               onChangeText={setEmail}

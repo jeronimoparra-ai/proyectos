@@ -60,6 +60,16 @@ export function HomeScreen() {
         </View>
       ) : null}
 
+      {!isLoading && !hasData ? (
+        <View style={styles.empty}>
+          <Text style={[styles.emptyIcon, { color: colors.textTertiary }]}>📋</Text>
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>No hay datos aún</Text>
+          <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+            Desliza hacia abajo para actualizar o añade tareas y eventos para empezar.
+          </Text>
+        </View>
+      ) : null}
+
       {reviewStats && (
         <View style={styles.statsRow}>
           <View style={[styles.statCard, { backgroundColor: colors.surface, borderRadius: borderRadius.lg }]}>
@@ -152,6 +162,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: 60,
+  },
+  empty: {
+    alignItems: 'center',
+    paddingTop: 60,
+    paddingHorizontal: 40,
+    gap: 12,
+  },
+  emptyIcon: {
+    fontSize: 48,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
   },
   header: {
     paddingHorizontal: 16,

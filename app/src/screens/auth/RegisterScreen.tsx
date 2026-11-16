@@ -96,6 +96,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
                 backgroundColor: colors.surfaceVariant,
                 color: colors.text,
                 borderColor: colors.border,
+                borderRadius: borderRadius.md,
               }]}
               value={displayName}
               onChangeText={setDisplayName}
@@ -112,6 +113,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
                 backgroundColor: colors.surfaceVariant,
                 color: colors.text,
                 borderColor: colors.border,
+                borderRadius: borderRadius.md,
               }]}
               value={email}
               onChangeText={setEmail}
@@ -130,6 +132,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
                 backgroundColor: colors.surfaceVariant,
                 color: colors.text,
                 borderColor: colors.border,
+                borderRadius: borderRadius.md,
               }]}
               value={password}
               onChangeText={setPassword}
@@ -146,6 +149,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
                 backgroundColor: colors.surfaceVariant,
                 color: colors.text,
                 borderColor: colors.border,
+                borderRadius: borderRadius.md,
               }]}
               value={confirmPassword}
               onChangeText={setConfirmPassword}

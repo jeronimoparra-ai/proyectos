@@ -112,10 +112,10 @@ export function CalendarScreen({ navigation }: TabScreenProps<'Calendar'>) {
       </View>
 
       <View style={styles.monthNav}>
-        <TouchableOpacity onPress={navigatePrev}>
+        <TouchableOpacity onPress={navigatePrev} style={styles.navButton}>
           <Text style={[styles.navArrow, { color: colors.primary }]}>{'←'}</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={navigateNext}>
+        <TouchableOpacity onPress={navigateNext} style={styles.navButton}>
           <Text style={[styles.navArrow, { color: colors.primary }]}>{'→'}</Text>
         </TouchableOpacity>
       </View>
@@ -208,6 +208,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 24,
     marginBottom: 8,
+  },
+  navButton: {
+    padding: 10,
   },
   navArrow: {
     fontSize: 24,

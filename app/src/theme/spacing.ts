@@ -8,6 +8,7 @@ export const spacing = {
   '3xl': 32,
   '4xl': 40,
   '5xl': 48,
+  '6xl': 56,
 } as const;
 
 export const borderRadius = {
