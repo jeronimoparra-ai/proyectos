@@ -183,12 +183,6 @@ jobs:
           fi
           cd android
           echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > release.keystore
-          cat >> gradle.properties <<EOP
-          RELEASE_STORE_FILE=release.keystore
-          RELEASE_KEY_ALIAS=proyectos
-          RELEASE_STORE_PASSWORD=${RELEASE_KEYSTORE_PASSWORD}
-          RELEASE_KEY_PASSWORD=${RELEASE_KEYSTORE_PASSWORD}
-          EOP
           python3 - <<'PY'
           import re
           path = 'app/build.gradle'
