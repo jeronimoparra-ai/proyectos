@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { env } from '../../config/env';
-import { supabase, createServiceClient } from '../../database/supabase';
+import { createServiceClient } from '../../database/supabase';
 
 // Cliente interno de proceso (service_role) para integraciones del backend.
 // Se crea perezosamente: nunca al importar el módulo (tests lo pueden mockear).
