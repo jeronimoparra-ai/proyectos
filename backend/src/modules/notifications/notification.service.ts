@@ -4,7 +4,17 @@ import { createAppError } from '../../middleware/error.middleware';
 import type { RegisterPushTokenInput } from './notification.schema';
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
-const EXPO_DEFAULT_TIMEOUT_MS = Number(process.env.EXPO_SEND_TIMEOUT_MS ?? '15_000');
+
+// Defaults seguros: acepta valores con guiones bajos como separadores de miles
+// (p.ej. '15_000') o números normales; nunca devuelve NaN.
+function numEnv(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (raw === undefined) return fallback;
+  const cleaned = raw.replace(/_/g, '');
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : fallback;
+}
+const EXPO_DEFAULT_TIMEOUT_MS = numEnv('EXPO_SEND_TIMEOUT_MS', 15000);
 
 interface PushPayload {
   title: string;

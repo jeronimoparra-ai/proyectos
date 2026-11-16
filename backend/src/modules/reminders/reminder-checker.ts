@@ -16,14 +16,22 @@ function getCheckerClient(): SupabaseClient {
 // Configuración del trabajador de recordatorios (todo por variable de
 // entorno; no hay secretos hardcodados). Valores por defecto.
 // ---------------------------------------------------------------------------
-const CHECK_INTERVAL_MS = Number(
-  process.env.REMINDER_CHECK_INTERVAL_MS ?? '60_000'
-);
-const BATCH_SIZE = Number(process.env.REMINDER_BATCH_SIZE ?? '25');
-const CLAIM_TTL_SECONDS = Number(process.env.REMINDER_CLAIM_TTL_SECONDS ?? '300');
-const RETRY_BASE_DELAY_MS = Number(process.env.REMINDER_RETRY_BASE_DELAY_MS ?? '5_000');
-const RETRY_MAX_DELAY_MS = Number(process.env.REMINDER_RETRY_MAX_DELAY_MS ?? '300_000');
-const SHUTDOWN_GRACE_MS = Number(process.env.REMINDER_SHUTDOWN_GRACE_MS ?? '30_000');
+// Defaults seguros: acepta valores con guiones bajos como separadores de miles
+// (p.ej. '60_000') o números normales; nunca devuelve NaN.
+function numEnv(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (raw === undefined) return fallback;
+  const cleaned = raw.replace(/_/g, '');
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+const CHECK_INTERVAL_MS = numEnv('REMINDER_CHECK_INTERVAL_MS', 60000);
+const BATCH_SIZE = numEnv('REMINDER_BATCH_SIZE', 25);
+const CLAIM_TTL_SECONDS = numEnv('REMINDER_CLAIM_TTL_SECONDS', 300);
+const RETRY_BASE_DELAY_MS = numEnv('REMINDER_RETRY_BASE_DELAY_MS', 5000);
+const RETRY_MAX_DELAY_MS = numEnv('REMINDER_RETRY_MAX_DELAY_MS', 300000);
+const SHUTDOWN_GRACE_MS = numEnv('REMINDER_SHUTDOWN_GRACE_MS', 30000);
 
 // Límite hard de reintentos para evitar bucles infinitos ante fallos que no
 // se recuperan. Se aplica por recordatorio.

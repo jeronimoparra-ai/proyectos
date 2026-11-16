@@ -7,7 +7,16 @@ import {
 
 // Seguridad extra: el lote en curso debe terminar o expirar antes de
 // salir, para que los reintentos en backoff recuperen los avisos pendientes.
-const SERVER_SHUTDOWN_GRACE_MS = Number(process.env.SERVER_SHUTDOWN_GRACE_MS ?? '30_000');
+// Defaults seguros: acepta valores con guiones bajos como separadores de miles.
+function numEnv(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (raw === undefined) return fallback;
+  const cleaned = raw.replace(/_/g, '');
+  const n = Number(cleaned);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+const SERVER_SHUTDOWN_GRACE_MS = numEnv('SERVER_SHUTDOWN_GRACE_MS', 30000);
 
 const server = app.listen(env.port, () => {
   console.log(`Server running on port ${env.port} [${env.nodeEnv}]`);
