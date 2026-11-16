@@ -210,7 +210,7 @@ jobs:
 
       - name: Build release APK
         working-directory: app/android
-        run: ./gradlew assembleRelease --no-daemon
+        run: ./gradlew assembleRelease --no-daemon --stacktrace --info
 
       - name: Stage artifact
         run: |
