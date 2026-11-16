@@ -95,7 +95,7 @@ export class ReviewService {
       .from('academic_tasks')
       .select('id, next_review_at, review_count, total_reviews')
       .eq('user_id', userId)
-      .is('deleted_at', null);
+      .is('deleted_at', null) as { data: Array<{ id: string; next_review_at: string | null; review_count: number | null; total_reviews: number | null }> | null; error: Error | null };
 
     if (tasksError) throw createAppError(tasksError.message, 500, 'DB_ERROR');
 

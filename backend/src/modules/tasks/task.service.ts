@@ -57,7 +57,7 @@ export class TaskService {
       throw createAppError('Task not found', 404, 'TASK_NOT_FOUND');
     }
 
-    return data;
+    return data as { id: string; [key: string]: unknown };
   }
 
   async create(userId: string, input: CreateTaskInput) {
@@ -84,11 +84,11 @@ export class TaskService {
       if (tagError) throw createAppError(tagError.message, 500, 'DB_ERROR');
     }
 
-    return data;
+    return data as { id: string; [key: string]: unknown };
   }
 
   async update(userId: string, taskId: string, input: UpdateTaskInput) {
-    const existing = await this.getById(userId, taskId);
+    await this.getById(userId, taskId);
 
     const { tags, ...updateData } = input;
 
@@ -122,7 +122,7 @@ export class TaskService {
       }
     }
 
-    return data;
+    return data as { id: string; [key: string]: unknown };
   }
 
   async softDelete(userId: string, taskId: string) {
