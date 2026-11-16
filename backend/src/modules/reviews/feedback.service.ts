@@ -22,14 +22,14 @@ export class FeedbackService {
       .select('id, title, completed_at')
       .eq('user_id', userId)
       .eq('status', 'completed')
-      .gte('updated_at', weekAgo.toISOString());
+      .gte('updated_at', weekAgo.toISOString()) as { data: Array<{ id: string; title: string; completed_at: string }> | null; error: Error | null };
 
     const { data: pendingTasks } = await supabase
       .from('tasks')
       .select('id, title')
       .eq('user_id', userId)
       .in('status', ['pending', 'in_progress'])
-      .is('deleted_at', null);
+      .is('deleted_at', null) as { data: Array<{ id: string; title: string }> | null; error: Error | null };
 
     const today = now.toISOString().split('T')[0];
     const { data: overdueTasks } = await supabase
@@ -39,14 +39,14 @@ export class FeedbackService {
       .neq('status', 'completed')
       .neq('status', 'cancelled')
       .lt('due_date', today)
-      .is('deleted_at', null);
+      .is('deleted_at', null) as { data: Array<{ id: string; title: string }> | null; error: Error | null };
 
     const { data: academicTasks } = await supabase
       .from('academic_tasks')
       .select('subject, topics (*)')
       .eq('user_id', userId)
       .gte('created_at', weekAgo.toISOString())
-      .is('deleted_at', null);
+      .is('deleted_at', null) as { data: Array<{ subject: string | null; topics: Array<{ name: string }> | null }> | null; error: Error | null };
 
     const topicsStudied = new Set<string>();
     (academicTasks ?? []).forEach((task) => {
@@ -58,7 +58,7 @@ export class FeedbackService {
       .from('reviews')
       .select('time_spent_seconds, created_at')
       .eq('user_id', userId)
-      .gte('created_at', weekAgo.toISOString());
+      .gte('created_at', weekAgo.toISOString()) as { data: Array<{ time_spent_seconds: number | null; created_at: string }> | null; error: Error | null };
 
     const totalSeconds = (reviews ?? []).reduce(
       (sum, r) => sum + (r.time_spent_seconds ?? 0),

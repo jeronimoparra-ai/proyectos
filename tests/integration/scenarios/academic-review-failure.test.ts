@@ -68,9 +68,11 @@ describe('Academic Failure Fixtures (rollback atómico)', () => {
   it('create_academic_task_atomic con user scope-mismatch rechaza sin escribir', async () => {
     const client = await pool.connect();
     try {
+      // Crear un segundo usuario REAL: el guard uid != p_user_id debe rechazar
+      // aunque el FK existe.
+      const otherId = await insertAuthUser(client, 'academic-other@example.com');
       await asUser(client, userId);
 
-      const otherId = '00000000-0000-4000-8000-000000000001';
       await expect(
         client.query(
           `SELECT create_academic_task_atomic($1, 'Tarea ajena', 'Biología', 'x', '[]'::jsonb)`,
@@ -80,6 +82,7 @@ describe('Academic Failure Fixtures (rollback atómico)', () => {
 
       await asUser(client, userId);
       const tasks = await client.query<{ c: number }>('SELECT COUNT(*)::int AS c FROM academic_tasks');
+      // Nadie creó nada: ni con el otro usuario ni el propio
       expect(tasks.rows[0].c).toBe(0);
     } finally {
       client.release();
