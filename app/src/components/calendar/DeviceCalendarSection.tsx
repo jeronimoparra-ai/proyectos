@@ -24,6 +24,7 @@ export function DeviceCalendarSection() {
     setBusy(true);
     setMessage('');
     try {
+      if (Platform.OS === 'web') throw new Error('Device calendar is only available on the phone.');
       const granted = await requestCalendarAccess();
       if (!granted) {
         setMessage('Calendar permission denied. Enable it in system settings to import events.');
@@ -39,13 +40,16 @@ export function DeviceCalendarSection() {
         start_before: to.toISOString(),
         limit: 100,
       });
+      const normalize = (date: string) => new Date(date).toISOString();
       const seen = new Set(
-        existing.events.map((event) => `${event.title.toLowerCase()}|${event.start_date}`),
+        existing.events.map(
+          (event) => `${event.title.trim().toLowerCase()}|${normalize(event.start_date)}`,
+        ),
       );
 
       let imported = 0;
       for (const event of deviceEvents) {
-        const key = `${event.title.toLowerCase()}|${event.startDate}`;
+        const key = `${event.title.trim().toLowerCase()}|${normalize(event.startDate)}`;
         if (seen.has(key)) continue;
         await eventService.create({
           title: event.title,
@@ -90,18 +94,30 @@ export function DeviceCalendarSection() {
         return;
       }
 
+      // Evita duplicados si el usuario pulsa dos veces o los eventos ya estan en el telefono.
+      const firstDue = Math.min(...withDate.map(({ due }) => new Date(due).getTime()));
+      const lastDue = Math.max(...withDate.map(({ due }) => new Date(due).getTime()));
+      const existingDevice = await listDeviceEvents(new Date(firstDue), new Date(lastDue + DAY_MS));
+      const normalize = (date: string) => new Date(date).toISOString();
+      const existingKeys = new Set(
+        existingDevice.map((event) => `${event.title.trim().toLowerCase()}|${normalize(event.startDate)}`),
+      );
+
       let exported = 0;
       for (const { task, due } of withDate) {
         const start = new Date(due);
+        const key = `${task.title.trim().toLowerCase()}|${normalize(start.toISOString())}`;
+        if (existingKeys.has(key)) continue;
         await createDeviceEvent({
           title: task.title,
           startDate: start.toISOString(),
           endDate: new Date(start.getTime() + 60 * 60 * 1000).toISOString(),
           notes: task.description ?? undefined,
         });
+        existingKeys.add(key);
         exported += 1;
       }
-      setMessage(`Added ${exported} task${exported === 1 ? '' : 's'} to your device calendar.`);
+      setMessage(exported === 0 ? 'All tasks are already in your device calendar.' : `Added ${exported} task${exported === 1 ? '' : 's'} to your device calendar.`);
     } catch (error) {
       setMessage((error as Error).message);
     } finally {
