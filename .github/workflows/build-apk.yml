@@ -194,18 +194,31 @@ jobs:
           s = open(path).read()
           old_signing = '    signingConfigs {\n        debug {\n            storeFile file(\'debug.keystore\')\n            storePassword \'android\'\n            keyAlias \'androiddebugkey\'\n            keyPassword \'android\'\n        }\n    }'
           new_signing = '    signingConfigs {\n        debug {\n            storeFile file(\'debug.keystore\')\n            storePassword \'android\'\n            keyAlias \'androiddebugkey\'\n            keyPassword \'android\'\n        }\n        release {\n            storeFile file(findProperty(\'RELEASE_STORE_FILE\') ?: \'release.keystore\')\n            storePassword findProperty(\'RELEASE_STORE_PASSWORD\')\n            keyAlias findProperty(\'RELEASE_KEY_ALIAS\') ?: \'proyectos\'\n            keyPassword findProperty(\'RELEASE_KEY_PASSWORD\')\n        }\n    }'
-          old_release = '            signingConfig signingConfigs.debug'
-          new_release = '            signingConfig signingConfigs.release'
           if 'findProperty(\'RELEASE_STORE_FILE\')' in s:
               print('signing release ya cableado — skip')
               exit(0)
           assert s.count(old_signing) == 1, 'signingConfigs block inesperado'
           s = s.replace(old_signing, new_signing, 1)
-          assert s.count(old_release) >= 1, 'release signingConfig line inesperada'
-          s = s.replace(old_release, new_release, 1)
+
+          # OJO: el template de Expo 57 tiene `signingConfig signingConfigs.debug`
+          # en buildTypes.debug Y en buildTypes.release. Reemplazar la primera
+          # ocurrencia dejaba release firmado con la clave DEBUG de AOSP (publica).
+          # Se localiza el bloque buildTypes y se cambia SOLO dentro de release.
+          import re
+          m = re.search(r'(    buildTypes \{)(.*?)(\n    \})', s, re.S)
+          assert m, 'buildTypes block inesperado'
+          block = m.group(2)
+          assert block.count('        release {') == 1, 'release buildType inesperado'
+          rel_at = block.index('        release {')
+          rel_block = block[rel_at:]
+          assert 'signingConfig signingConfigs.debug' in rel_block, 'firma release inesperada'
+          new_block = block[:rel_at] + rel_block.replace(
+              'signingConfig signingConfigs.debug',
+              'signingConfig signingConfigs.release', 1)
+          s = s[:m.start(2)] + new_block + s[m.end(2):]
           with open(path, 'w') as f:
               f.write(s)
-          print('signingConfigs.release cableado')
+          print('signingConfigs.release cableado SOLO en buildTypes.release')
           PY
 
       - name: Build release APK
@@ -230,6 +243,25 @@ jobs:
           retention-days: 30
 
       # Publicar SOLO si el job llega aquí (gate validate fue verde).
+      - name: Verify APK signature (rechaza clave debug)
+        working-directory: app
+        run: |
+          set -euo pipefail
+          APKSIGNER=$(find "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}" -path '*/build-tools/*/apksigner' -type f 2>/dev/null | sort -V | tail -1 || true)
+          if [ -z "$APKSIGNER" ]; then
+            echo "::error::No se encontro apksigner en el SDK de Android"
+            exit 1
+          fi
+          "$APKSIGNER" verify --print-certs productivity-app.apk | tee /tmp/opencode-apksigner.txt
+          if grep -qi 'Android Debug' /tmp/opencode-apksigner.txt; then
+            echo "::error::La APK esta firmada con la clave debug publica de AOSP; no se publica."
+            exit 1
+          fi
+          if ! grep -qi 'Signer #1' /tmp/opencode-apksigner.txt; then
+            echo "::error::La APK no tiene firma verificable"
+            exit 1
+          fi
+
       - name: Publish to Release
         uses: softprops/action-gh-release@v2
         with:
