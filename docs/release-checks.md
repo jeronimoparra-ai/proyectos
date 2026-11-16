@@ -1,6 +1,6 @@
 # Release checks — APK firmado (productivity-app)
 
-Documento informativo. No modifica la app ni el backend. Rama: `remediacion/t1-t5-candidato`.
+Documento informativo. No modifica la app ni el backend. Rama de referencia: `master`.
 
 ## 1) Disparar el build firmado en GitHub Actions
 
@@ -20,7 +20,8 @@ Secrets requeridos (Settings → Secrets and variables → Actions):
 Sin estos secrets el workflow avisa y compila un APK sin firmar para distribución real.
 También conviene `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` y
 `EXPO_PUBLIC_API_URL`; si faltan, la app abre en pantalla «Configuración incompleta».
-El asset resultante se publica como `productivity-app.apk` en la Release (`.../releases/latest/download/productivity-app.apk`).
+El asset resultante se publica como `productivity-app.apk` en la Release `apk-latest`
+(`.../releases/download/apk-latest/productivity-app.apk`), que se reescribe en cada build.
 
 ## 2) Instalar en un móvil desde esta máquina
 
@@ -45,6 +46,17 @@ adb shell pm list packages | grep productividad
 
 El `applicationId` real es `com.jerodev.productivityapp` (app.json); el grep en español
 puede no coincidir — usar `grep -i productivity` o `grep jerodev`. Comprobar que la app abre y llega al login.
+
+### Trampas ya resueltas en el workflow (no reintroducir)
+
+- `app/android/gradle.properties` lo genera `expo prebuild` **sin salto de línea final**.
+  Al inyectar las propiedades `RELEASE_*` hay que empezar con `\n`, o la última propiedad
+  (`expo.inlineModules.watchedDirectories=[]`) queda concatenada y el autolinking de Expo
+  muere con `Process 'command 'node'' finished with non-zero exit value 1`.
+- Gradle no expone las propiedades personalizadas como variables: en `build.gradle` hay
+  que usar `findProperty('RELEASE_STORE_FILE')`, no `RELEASE_STORE_FILE`.
+- El bloque `signingConfigs.release` debe insertarse **dentro** del `signingConfigs`
+  existente (no crear un segundo bloque) y `buildTypes.release` debe apuntar a él.
 
 ## 4) Riesgos residuales documentados
 
