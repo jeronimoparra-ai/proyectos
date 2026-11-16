@@ -298,7 +298,7 @@ export class NotificationService {
         const clientTime = new Date(input.clientTimestamp).getTime();
         const existingTime = new Date(existing.updated_at).getTime();
         if (!isNaN(clientTime) && !isNaN(existingTime) && clientTime < existingTime) {
-          return existing;
+          return existing as { user_id: string; active: boolean; updated_at: string };
         }
       }
     }
@@ -320,7 +320,7 @@ export class NotificationService {
       .single();
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
-    return data;
+    return data as { user_id: string; token: string; platform: string; active: boolean; updated_at: string };
   }
 
   // --- Desvinculación idempotente al cerrar sesión (T2) ----------------

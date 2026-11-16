@@ -75,10 +75,11 @@ export class GoogleCalendarService {
       expires_at: new Date(Date.now() + 5 * 60_000).toISOString(),
     });
     dbError(error);
-    return `https://accounts.google.com/o/oauth2/v2/auth?${new URLSearchParams({
+    const searchParams = new URLSearchParams({
       client_id: env.googleClientId, redirect_uri: redirectUri, response_type: 'code', scope: SCOPE,
       state, access_type: 'offline', prompt: 'consent',
-    })}`;
+    });
+    return `https://accounts.google.com/o/oauth2/v2/auth?${searchParams.toString()}`;
   }
 
   private async tokenRequest(params: Record<string, string>): Promise<Tokens> {
@@ -104,7 +105,7 @@ export class GoogleCalendarService {
   private async connection(userId: string) {
     const { data, error } = await internalClient().from('calendar_integrations').select('*').eq('user_id', userId).eq('provider', 'google').maybeSingle();
     dbError(error);
-    return data;
+    return data as { id: string; user_id: string; provider: string; refresh_token: string | null; access_token: string | null; token_expires_at: string | null; sync_enabled: boolean; calendar_id: string } | null;
   }
 
   async handleOAuthCallback(code: unknown, userId: string, state: unknown, redirectUri: unknown) {
@@ -124,7 +125,7 @@ export class GoogleCalendarService {
       p_user_id: userId, p_state_hash: hash(state), p_redirect_uri: redirectUri,
       p_tokens: { access_token: tokens.access_token, refresh_token: refreshToken,
         token_expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString() },
-    });
+    }) as { error: Error | null; data: unknown };
     if (saved.error) throw createAppError('Connection could not finish. Start Google connection again.', 409, 'GOOGLE_CONNECTION_CHANGED');
     return { message: 'Google Calendar connected successfully' };
   }
@@ -139,7 +140,7 @@ export class GoogleCalendarService {
       catch (error) {
         if ((error as { code?: string }).code === 'GOOGLE_RECONNECT_REQUIRED') {
           const invalidated = await internalClient().from('calendar_integrations').update({ sync_enabled: false })
-            .eq('id', connection.id).eq('user_id', userId).eq('refresh_token', connection.refresh_token);
+            .eq('id', connection.id).eq('user_id', userId).eq('refresh_token', connection.refresh_token) as { error: Error | null };
           dbError(invalidated.error);
         }
         throw error;
@@ -147,7 +148,7 @@ export class GoogleCalendarService {
       const saved = await internalClient().from('calendar_integrations').update({
         access_token: tokens.access_token, refresh_token: tokens.refresh_token || connection.refresh_token,
         token_expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
-      }).eq('id', connection.id).eq('user_id', userId).eq('refresh_token', connection.refresh_token).select('id').maybeSingle();
+      }).eq('id', connection.id).eq('user_id', userId).eq('refresh_token', connection.refresh_token).select('id').maybeSingle() as { data: { id: string } | null; error: Error | null };
       dbError(saved.error);
       if (!saved.data) throw createAppError('Connection changed during sync. Retry sync.', 409, 'GOOGLE_CONNECTION_CHANGED');
       accessToken = tokens.access_token;
@@ -166,7 +167,7 @@ export class GoogleCalendarService {
           params.set('timeMax', new Date(now + 90 * 86400000).toISOString());
         }
         if (pageToken) params.set('pageToken', pageToken);
-        const response = await this.request(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(connection.calendar_id)}/events?${params}`, { headers: { Authorization: `Bearer ${accessToken}` } });
+        const response = await this.request(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(connection.calendar_id)}/events?${params.toString()}`, { headers: { Authorization: `Bearer ${accessToken}` } });
         if (response.status === 401 || response.status === 403) throw reconnect();
         if (!response.ok) throw createAppError('Unable to import Google events. Retry later.', 502, 'GOOGLE_FETCH_FAILED');
         const data = await response.json() as { items?: GoogleEvent[]; nextPageToken?: string; timeZone?: string };
@@ -178,13 +179,13 @@ export class GoogleCalendarService {
         if (pageToken) pages.add(pageToken);
       } while (pageToken);
     }
-    const { data, error } = await internalClient().rpc('import_calendar_events', { p_user_id: userId, p_integration_id: connection.id, p_events: [...events.values()] });
+    const { data, error } = await internalClient().rpc('import_calendar_events', { p_user_id: userId, p_integration_id: connection.id, p_events: [...events.values()] }) as { data: { message: string; total: number } | null; error: Error | null };
     dbError(error);
     return { message: 'Sync completed', ...data, total: events.size };
   }
 
   async disconnect(userId: string) {
-    const result = await internalClient().rpc('disconnect_calendar', { p_user_id: userId });
+    const result = await internalClient().rpc('disconnect_calendar', { p_user_id: userId }) as { error: Error | null };
     dbError(result.error);
     // Imported events intentionally survive disconnection.
     return { message: 'Google Calendar disconnected' };

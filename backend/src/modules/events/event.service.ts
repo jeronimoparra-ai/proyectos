@@ -108,7 +108,7 @@ export class EventService {
   /** @deprecated Use POST /google/sync: imported data must come from Google. */
   async syncFromGoogle(userId: string, _legacyEvents?: unknown) {
     const { googleCalendarService } = await import('../google/google-calendar.service');
-    return googleCalendarService.syncEvents(userId);
+    return googleCalendarService.syncEvents(userId) as { message: string; total: number };
   }
 }
 

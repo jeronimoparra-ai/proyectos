@@ -114,10 +114,10 @@ export async function applyMigrations(
     REVOKE ALL ON public.calendar_oauth_states FROM PUBLIC, anon, authenticated;
   `);
   await client.query(`
-    REVOKE EXECUTE ON public.import_calendar_events(uuid, uuid, jsonb) FROM PUBLIC, anon, authenticated;
-    REVOKE EXECUTE ON public.complete_calendar_connection(uuid, text, text, jsonb) FROM PUBLIC, anon, authenticated;
-    REVOKE EXECUTE ON public.disconnect_calendar(uuid) FROM PUBLIC, anon, authenticated;
-    REVOKE EXECUTE ON public.claim_due_reminders(TEXT, INT, INT) FROM PUBLIC, anon, authenticated;
+    REVOKE EXECUTE ON FUNCTION public.import_calendar_events(uuid, uuid, jsonb) FROM PUBLIC, anon, authenticated;
+    REVOKE EXECUTE ON FUNCTION public.complete_calendar_connection(uuid, text, text, jsonb) FROM PUBLIC, anon, authenticated;
+    REVOKE EXECUTE ON FUNCTION public.disconnect_calendar(uuid) FROM PUBLIC, anon, authenticated;
+    REVOKE EXECUTE ON FUNCTION public.claim_due_reminders(text, integer, integer) FROM PUBLIC, anon, authenticated;
   `);
 }
 
