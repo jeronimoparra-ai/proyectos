@@ -163,6 +163,59 @@ jobs:
       - name: Generate Android project
         run: npx expo prebuild --platform android --no-install
 
+      # Firma opcional pero recomendada: si existen los secrets, la APK queda firmada
+      # y Android la instala sin problema. Si no existen, emite aviso y genera APK
+      # sin firmar (debug-similar) solo apto para validación, NO para distribución.
+      - name: Sign release APK (saltado si faltan secrets)
+        working-directory: app
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+        run: |
+          set -eu
+          if [ -z "${RELEASE_KEYSTORE_BASE64:-}" ] || [ -z "${RELEASE_KEYSTORE_PASSWORD:-}" ]; then
+            echo "::warning::RELEASE_KEYSTORE_BASE64 o RELEASE_KEYSTORE_PASSWORD no definidos;"
+            echo "::warning::generando APK sin firmar (solo para validación interna)."
+            echo "::warning::carga el secret RELEASE_KEYSTORE_BASE64|RELEASE_KEYSTORE_PASSWORD para distribución real."
+            exit 0
+          fi
+          cd android
+          echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > release.keystore
+          cat >> gradle.properties <<EOP
+          RELEASE_STORE_FILE=release.keystore
+          RELEASE_KEY_ALIAS=proyectos
+          RELEASE_STORE_PASSWORD=${RELEASE_KEYSTORE_PASSWORD}
+          RELEASE_KEY_PASSWORD=${RELEASE_KEYSTORE_PASSWORD}
+          EOP
+          python3 - <<'PY'
+          import re
+          path = 'app/build.gradle'
+          s = open(path).read()
+          if 'signingConfigs {' in s and 'signingConfig signingConfigs.release' in s:
+              print('signingConfigs.release ya presente en build.gradle')
+              exit(0)
+          if 'signingConfigs {' not in s:
+              inject = (
+                  'signingConfigs {\n'
+                  '            release {\n'
+                  '                storeFile file(RELEASE_STORE_FILE)\n'
+                  '                storePassword RELEASE_STORE_PASSWORD\n'
+                  '                keyAlias RELEASE_KEY_ALIAS\n'
+                  '                keyPassword RELEASE_KEY_PASSWORD\n'
+                  '            }\n'
+                  '        }\n'
+                  '        '
+              )
+              s = s.replace('buildTypes {', inject + 'buildTypes {', 1)
+          m = re.search(r'(        release\s*\{)([^}]*)\}', s)
+          if m:
+              s = s[:m.start()] + m.group(1) + '\n            signingConfig signingConfigs.release' + m.group(2) + '}' + s[m.end():]
+          f = open(path, 'w')
+          f.write(s)
+          f.close()
+          print('signingConfigs.release cableado')
+          PY
+
       - name: Build release APK
         working-directory: app/android
         run: ./gradlew assembleRelease --no-daemon
@@ -194,9 +247,10 @@ jobs:
 
             Instalación: descarga el archivo, permite orígenes desconocidos e instala.
 
-            Si al abrirla ves "Configuración incompleta", define los secrets
-            EXPO_PUBLIC_SUPABASE_URL, EXPO_PUBLIC_SUPABASE_ANON_KEY y
-            EXPO_PUBLIC_API_URL en Settings → Secrets and variables → Actions
-            y relanza el workflow.
+            Esta APK está firmada con la keystore del proyecto (secret
+            RELEASE_KEYSTORE_BASE64). Los EXPO_PUBLIC_SUPABASE_URL,
+            EXPO_PUBLIC_SUPABASE_ANON_KEY y EXPO_PUBLIC_API_URL existen en
+            el entorno de compilación (secrets). Sin ellos la app abrirá
+            igualmente y mostrará la pantalla "Configuración incompleta".
           files: app/productivity-app.apk
           make_latest: true
