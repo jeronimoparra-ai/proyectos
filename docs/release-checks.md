@@ -4,9 +4,9 @@ Documento informativo. No modifica la app ni el backend. Rama: `remediacion/t1-t
 
 ## 1) Disparar el build firmado en GitHub Actions
 
-El workflow `.github/workflows/build-apk.yml` (workflow_dispatch, o push de tag `v*`)
-ejecuta primero un gate de validación (`validate`: typecheck y tests backend, lint con
-regresión guard, expo-doctor no bloqueante, build backend). Si falla, no se compila el APK.
+`.github/workflows/build-apk.yml` (workflow_dispatch, o push de tag `v*`) ejecuta primero
+un gate de validación (`validate`: typecheck y tests backend, lint con regresión guard,
+expo-doctor no bloqueante, build backend). Si falla, no se compila el APK.
 
 ```bash
 gh workflow run build-apk.yml --ref master
@@ -20,9 +20,7 @@ Secrets requeridos (Settings → Secrets and variables → Actions):
 Sin estos secrets el workflow avisa y compila un APK sin firmar para distribución real.
 También conviene `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` y
 `EXPO_PUBLIC_API_URL`; si faltan, la app abre en pantalla «Configuración incompleta».
-
-El asset resultante se publica como `productivity-app.apk` en la Release
-(`.../releases/latest/download/productivity-app.apk`).
+El asset resultante se publica como `productivity-app.apk` en la Release (`.../releases/latest/download/productivity-app.apk`).
 
 ## 2) Instalar en un móvil desde esta máquina
 
@@ -46,24 +44,17 @@ adb shell pm list packages | grep productividad
 ```
 
 El `applicationId` real es `com.jerodev.productivityapp` (app.json); el grep en español
-puede no coincidir — usar `grep -i productivity` o `grep jerodev` si no devuelve nada.
-Comprobar en el dispositivo que la app abre y llega al login.
+puede no coincidir — usar `grep -i productivity` o `grep jerodev`. Comprobar que la app abre y llega al login.
 
 ## 4) Riesgos residuales documentados
 
 - Los integration tests (`tests/integration`, docker-compose + Postgres) solo corren en CI;
   en local requieren `npm run test:integration` manual.
-- Google OAuth y la instalación/uso del APK real necesitan dispositivo físico: el CI/emulador
-  no valida redirect URIs, keystore ni permisos reales.
-- APK firmado ≠ regresión completa en device: validar manualmente login, calendario (T3)
-  y reminders (T5) tras instalar.
+- Google OAuth y la instalación/uso del APK real necesitan dispositivo físico: el CI/emulador no valida redirect URIs, keystore ni permisos reales.
+- APK firmado ≠ regresión completa en device: validar manualmente login, calendario (T3) y reminders (T5).
 - Sin EXPO_PUBLIC_* el APK se publica igualmente con pantalla de configuración incompleta.
 - Lint backend congelado con regresión guard (191 errores + 5 warnings); no es deuda resuelta.
 - expo-doctor no bloqueante (mismatch expo 57.0.32 vs ~57.0.33).
-- La keystore vive solo en secrets de CI; perderla impide actualizar la app instalada
-  (misma firma obligatoria para upgrades).
+- La keystore vive solo en secrets de CI; perderla impide actualizar la app instalada.
 
-## Notas
-
-- No commitear el `.apk`, la keystore ni contraseñas al repo.
-- Cambios en workflows o firma requieren su propio proceso.
+Notas: no commitear el `.apk`, la keystore ni contraseñas al repo. Cambios en workflows o firma requieren su propio proceso.
