@@ -23,6 +23,7 @@ interface ReviewState {
   }) => Promise<void>;
   loadFeedback: () => Promise<void>;
   loadRecommendations: () => Promise<void>;
+  reset: () => void;
 }
 
 export const useReviewStore = create<ReviewState>((set) => ({
@@ -112,4 +113,16 @@ export const useReviewStore = create<ReviewState>((set) => ({
       set({ error: message });
     }
   },
+
+  reset: () =>
+    set({
+      dueReviews: [],
+      reviewHistory: [],
+      reviewStats: null,
+      feedback: null,
+      recommendations: [],
+      isLoading: false,
+      isSubmitting: false,
+      error: null,
+    }),
 }));

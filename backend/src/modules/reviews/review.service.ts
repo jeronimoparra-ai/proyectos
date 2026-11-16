@@ -1,65 +1,57 @@
 import { supabase } from '../../database/supabase';
 import { createAppError } from '../../middleware/error.middleware';
-import { calculateSM2 } from '../../utils/sm2';
 import type { CreateReviewInput } from './review.schema';
 
 export class ReviewService {
   async recordReview(userId: string, input: CreateReviewInput) {
-    const { data: existing, error: fetchError } = await supabase
-      .from('academic_tasks')
-      .select('id, user_id')
-      .eq('id', input.academic_task_id)
-      .eq('user_id', userId)
-      .single();
+    // Use atomic RPC function for review recording with locking, idempotency, and proper SM-2 tracking
+    const { data, error } = await supabase.rpc('record_review_atomic', {
+      p_user_id: userId,
+      p_academic_task_id: input.academic_task_id,
+      p_quality: input.quality,
+      p_difficulty: input.difficulty ?? null,
+      p_time_spent_seconds: input.time_spent_seconds ?? null,
+      p_idempotency_key: input.idempotency_key ?? null,
+    }) as { data: Array<{ review_id: string; quality: number; difficulty: number | null; time_spent_seconds: number | null; ease_factor: number; interval: number; repetitions: number; next_review_at: string; created_at: string; is_duplicate: boolean; sm2_repetitions: number; total_reviews: number }> | null; error: { code: string; message: string } | null };
 
-    if (fetchError || !existing) {
-      throw createAppError('Academic task not found', 404, 'TASK_NOT_FOUND');
+    if (error) {
+      // Handle specific error codes
+      if (error.code === 'P0001') {
+        throw createAppError('Academic task not found', 404, 'TASK_NOT_FOUND');
+      }
+      throw createAppError(error.message, 500, 'DB_ERROR');
     }
 
-    const { data: lastReview } = await supabase
-      .from('reviews')
-      .select('ease_factor, interval, repetitions')
-      .eq('academic_task_id', input.academic_task_id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
+    if (!data || data.length === 0) {
+      throw createAppError('Failed to record review', 500, 'DB_ERROR');
+    }
 
-    const sm2Result = calculateSM2(
-      input.quality,
-      lastReview?.ease_factor ?? 2.5,
-      lastReview?.interval ?? 0,
-      lastReview?.repetitions ?? 0
-    );
+    const result = data[0];
 
-    const { data, error } = await supabase
-      .from('reviews')
-      .insert({
+    // Return format compatible with existing code
+    return {
+      review: {
+        id: result.review_id,
         academic_task_id: input.academic_task_id,
         user_id: userId,
-        quality: input.quality,
-        difficulty: input.difficulty,
-        time_spent_seconds: input.time_spent_seconds,
-        ease_factor: sm2Result.easeFactor,
-        interval: sm2Result.interval,
-        repetitions: sm2Result.repetitions,
-        next_review_at: sm2Result.nextReviewAt,
-      })
-      .select()
-      .single();
-
-    if (error) throw createAppError(error.message, 500, 'DB_ERROR');
-
-    await supabase
-      .from('academic_tasks')
-      .update({
-        next_review_at: sm2Result.nextReviewAt,
-        review_count: (lastReview?.repetitions ?? 0) + 1,
-      })
-      .eq('id', input.academic_task_id);
-
-    return {
-      review: data,
-      sm2: sm2Result,
+        quality: result.quality,
+        difficulty: result.difficulty,
+        time_spent_seconds: result.time_spent_seconds,
+        ease_factor: result.ease_factor,
+        interval: result.interval,
+        repetitions: result.repetitions,
+        next_review_at: result.next_review_at,
+        created_at: result.created_at,
+      },
+      sm2: {
+        easeFactor: result.ease_factor,
+        interval: result.interval,
+        repetitions: result.repetitions,
+        nextReviewAt: result.next_review_at,
+      },
+      isDuplicate: result.is_duplicate,
+      sm2Repetitions: result.sm2_repetitions,
+      totalReviews: result.total_reviews,
     };
   }
 
@@ -81,7 +73,8 @@ export class ReviewService {
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
-    return data ?? [];
+    const dueReviews = (data ?? []) as Array<{ id: string; [key: string]: unknown }>;
+    return dueReviews;
   }
 
   async getReviewHistory(userId: string, academicTaskId: string) {
@@ -95,13 +88,14 @@ export class ReviewService {
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
-    return data ?? [];
+    const history = (data ?? []) as Array<{ id: string; [key: string]: unknown }>;
+    return history;
   }
 
   async getReviewStats(userId: string) {
     const { data: tasks, error: tasksError } = await supabase
       .from('academic_tasks')
-      .select('id, next_review_at, review_count')
+      .select('id, next_review_at, review_count, total_reviews')
       .eq('user_id', userId)
       .is('deleted_at', null);
 
@@ -113,7 +107,8 @@ export class ReviewService {
       return new Date(t.next_review_at) <= now;
     }).length;
 
-    const totalReviews = (tasks ?? []).reduce((sum, t) => sum + (t.review_count ?? 0), 0);
+    // Use total_reviews for historical count, review_count for SM-2 streak
+    const totalReviews = (tasks ?? []).reduce((sum, t) => sum + (t.total_reviews ?? 0), 0);
 
     const { count: totalTasks } = await supabase
       .from('academic_tasks')
@@ -134,6 +129,7 @@ export class ReviewService {
       .update({
         next_review_at: new Date().toISOString(),
         review_count: 0,
+        total_reviews: 0,
       })
       .eq('id', academicTaskId)
       .eq('user_id', userId);

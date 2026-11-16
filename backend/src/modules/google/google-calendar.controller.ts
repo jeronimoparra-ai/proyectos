@@ -5,8 +5,7 @@ import type { AuthenticatedRequest } from '../../middleware/auth.middleware';
 export class GoogleCalendarController {
   async getAuthUrl(req: Request, res: Response, next: NextFunction) {
     try {
-      const authReq = req as AuthenticatedRequest;
-      const url = googleCalendarService.getAuthUrl(authReq.userId!);
+      const url = await googleCalendarService.getAuthUrl((req as AuthenticatedRequest).userId!);
       res.json({ url });
     } catch (error) {
       next(error);
@@ -15,9 +14,9 @@ export class GoogleCalendarController {
 
   async handleCallback(req: Request, res: Response, next: NextFunction) {
     try {
-      const authReq = req as AuthenticatedRequest;
-      const { code } = req.body;
-      const result = await googleCalendarService.handleOAuthCallback(code, authReq.userId!);
+      const { code, state, redirectUri } = req.body ?? {};
+      const userId = (req as AuthenticatedRequest).userId!;
+      const result = await googleCalendarService.handleOAuthCallback(code, userId, state, redirectUri);
       res.json(result);
     } catch (error) {
       next(error);
@@ -26,8 +25,8 @@ export class GoogleCalendarController {
 
   async syncEvents(req: Request, res: Response, next: NextFunction) {
     try {
-      const authReq = req as AuthenticatedRequest;
-      const result = await googleCalendarService.syncEvents(authReq.userId!);
+      const userId = (req as AuthenticatedRequest).userId!;
+      const result = await googleCalendarService.syncEvents(userId);
       res.json(result);
     } catch (error) {
       next(error);
@@ -36,8 +35,8 @@ export class GoogleCalendarController {
 
   async disconnect(req: Request, res: Response, next: NextFunction) {
     try {
-      const authReq = req as AuthenticatedRequest;
-      const result = await googleCalendarService.disconnect(authReq.userId!);
+      const userId = (req as AuthenticatedRequest).userId!;
+      const result = await googleCalendarService.disconnect(userId);
       res.json(result);
     } catch (error) {
       next(error);
@@ -46,8 +45,8 @@ export class GoogleCalendarController {
 
   async checkConnection(req: Request, res: Response, next: NextFunction) {
     try {
-      const authReq = req as AuthenticatedRequest;
-      const connected = await googleCalendarService.isConnected(authReq.userId!);
+      const userId = (req as AuthenticatedRequest).userId!;
+      const connected = await googleCalendarService.isConnected(userId);
       res.json({ connected });
     } catch (error) {
       next(error);

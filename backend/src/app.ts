@@ -16,7 +16,6 @@ import { webSearchRoutes } from './modules/web-search/web-search.routes';
 import { reviewRoutes } from './modules/reviews/review.routes';
 import { studySessionRoutes } from './modules/study-sessions/study-session.routes';
 import { notificationRoutes } from './modules/notifications/notification.routes';
-import { startReminderChecker } from './modules/reminders/reminder-checker';
 
 const app = express();
 
@@ -59,6 +58,7 @@ app.use('/api/notifications', apiLimiter, notificationRoutes);
 
 app.use(errorHandler);
 
-startReminderChecker();
+// El trabajador de recordatorios se arranca explícitamente desde
+// server.ts. Importar app.ts NO lanza ningún worker ni intervalo.
 
 export { app };

@@ -57,7 +57,8 @@ export class TaskService {
       throw createAppError('Task not found', 404, 'TASK_NOT_FOUND');
     }
 
-    return data;
+    const task = data as { id: string; [key: string]: unknown };
+    return task;
   }
 
   async create(userId: string, input: CreateTaskInput) {
@@ -72,8 +73,9 @@ export class TaskService {
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
     if (tags && tags.length > 0) {
+      const taskId = (data as { id: string }).id;
       const tagInserts = tags.map((tagId) => ({
-        task_id: data.id,
+        task_id: taskId,
         tag_id: tagId,
       }));
 
@@ -84,11 +86,12 @@ export class TaskService {
       if (tagError) throw createAppError(tagError.message, 500, 'DB_ERROR');
     }
 
-    return data;
+    const createdTask = data as { id: string; [key: string]: unknown };
+    return createdTask;
   }
 
   async update(userId: string, taskId: string, input: UpdateTaskInput) {
-    const existing = await this.getById(userId, taskId);
+    await this.getById(userId, taskId);
 
     const { tags, ...updateData } = input;
 
@@ -122,7 +125,8 @@ export class TaskService {
       }
     }
 
-    return data;
+    const updatedTask = data as { id: string; [key: string]: unknown };
+    return updatedTask;
   }
 
   async softDelete(userId: string, taskId: string) {
@@ -158,7 +162,7 @@ export class TaskService {
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
-    return data ?? [];
+    return (data ?? []) as Array<{ id: string; [key: string]: unknown }>;
   }
 
   async getUpcoming(userId: string, days: number = 7) {
@@ -180,7 +184,7 @@ export class TaskService {
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
-    return data ?? [];
+    return (data ?? []) as Array<{ id: string; [key: string]: unknown }>;
   }
 }
 

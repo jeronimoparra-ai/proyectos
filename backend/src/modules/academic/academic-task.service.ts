@@ -27,7 +27,7 @@ export class AcademicTaskService {
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
     return {
-      tasks: data ?? [],
+      tasks: (data ?? []) as Array<{ id: string; [key: string]: unknown }>,
       total: count ?? 0,
       page: query.page,
       limit: query.limit,
@@ -47,47 +47,31 @@ export class AcademicTaskService {
       throw createAppError('Academic task not found', 404, 'ACADEMIC_TASK_NOT_FOUND');
     }
 
-    return data;
+    const typedData = data as { id: string; content?: string; study_materials?: Array<{ type: string; content: string }>; [key: string]: unknown };
+    return typedData;
   }
 
   async create(userId: string, input: CreateAcademicTaskInput) {
     const { materials, topics, ...taskData } = input;
 
-    const { data, error } = await supabase
-      .from('academic_tasks')
-      .insert({ ...taskData, user_id: userId })
-      .select()
-      .single();
+    // Use atomic RPC function for task + materials + topics creation
+    const { data, error } = await supabase.rpc('create_academic_task_atomic', {
+      p_user_id: userId,
+      p_title: taskData.title,
+      p_subject: taskData.subject ?? null,
+      p_content: taskData.content ?? null,
+      p_materials: materials ?? [],
+      p_topics: topics ?? [],
+    }) as { data: Array<{ id: string; [key: string]: unknown }> | null; error: Error | null };
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
-    if (materials && materials.length > 0) {
-      const materialInserts = materials.map((m) => ({
-        academic_task_id: data.id,
-        ...m,
-      }));
-
-      const { error: matError } = await supabase
-        .from('study_materials')
-        .insert(materialInserts);
-
-      if (matError) throw createAppError(matError.message, 500, 'DB_ERROR');
+    if (!data || data.length === 0) {
+      throw createAppError('Failed to create academic task', 500, 'DB_ERROR');
     }
 
-    if (topics && topics.length > 0) {
-      const topicInserts = topics.map((t) => ({
-        academic_task_id: data.id,
-        ...t,
-      }));
-
-      const { error: topicError } = await supabase
-        .from('topics')
-        .insert(topicInserts);
-
-      if (topicError) throw createAppError(topicError.message, 500, 'DB_ERROR');
-    }
-
-    return data;
+    const createdTask = data[0] as { id: string; [key: string]: unknown };
+    return createdTask;
   }
 
   async update(userId: string, taskId: string, input: UpdateAcademicTaskInput) {
@@ -103,7 +87,8 @@ export class AcademicTaskService {
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
-    return data;
+    const updatedTask = data as { id: string; [key: string]: unknown };
+    return updatedTask;
   }
 
   async softDelete(userId: string, taskId: string) {

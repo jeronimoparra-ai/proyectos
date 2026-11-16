@@ -1,4 +1,4 @@
-import { supabase } from '../../database/supabase';
+import { supabase, signOutVerifiedUser, updateVerifiedUser } from '../../database/supabase';
 import { env } from '../../config/env';
 import { createAppError } from '../../middleware/error.middleware';
 import type { RegisterInput, LoginInput, ForgotPasswordInput } from './auth.schema';
@@ -23,11 +23,12 @@ export class AuthService {
       throw createAppError('Failed to create user', 500, 'USER_CREATION_FAILED');
     }
 
+    const userMetadata = (authData.user.user_metadata ?? {}) as Record<string, unknown>;
     return {
       user: {
         id: authData.user.id,
         email: authData.user.email!,
-        displayName: authData.user.user_metadata?.display_name ?? null,
+        displayName: (userMetadata.display_name as string) ?? null,
       },
       session: authData.session,
     };
@@ -43,18 +44,19 @@ export class AuthService {
       throw createAppError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
     }
 
+    const userMetadata = (authData.user.user_metadata ?? {}) as Record<string, unknown>;
     return {
       user: {
         id: authData.user.id,
         email: authData.user.email!,
-        displayName: authData.user.user_metadata?.display_name ?? null,
+        displayName: (userMetadata.display_name as string) ?? null,
       },
       session: authData.session,
     };
   }
 
   async logout(token: string) {
-    const { error } = await supabase.auth.admin.signOut(token);
+    const { error } = await signOutVerifiedUser(token);
 
     if (error) {
       throw createAppError('Failed to logout', 500, 'LOGOUT_FAILED');
@@ -70,11 +72,12 @@ export class AuthService {
       throw createAppError('Invalid session', 401, 'INVALID_SESSION');
     }
 
+    const userMetadata = (data.user.user_metadata ?? {}) as Record<string, unknown>;
     return {
       user: {
         id: data.user.id,
         email: data.user.email!,
-        displayName: data.user.user_metadata?.display_name ?? null,
+        displayName: (userMetadata.display_name as string) ?? null,
       },
     };
   }
@@ -106,7 +109,7 @@ export class AuthService {
   }
 
   async updateProfile(updates: { displayName?: string }) {
-    const { data, error } = await supabase.auth.updateUser({
+    const { data, error } = await updateVerifiedUser({
       data: updates.displayName ? { display_name: updates.displayName } : undefined,
     });
 
@@ -114,11 +117,12 @@ export class AuthService {
       throw createAppError(error.message, 400, 'UPDATE_FAILED');
     }
 
+    const userMetadata = (data.user.user_metadata ?? {}) as Record<string, unknown>;
     return {
       user: {
         id: data.user.id,
         email: data.user.email!,
-        displayName: data.user.user_metadata?.display_name ?? null,
+        displayName: (userMetadata.display_name as string) ?? null,
       },
     };
   }

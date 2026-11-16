@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { eventOccursOnDay } from './event-days';
 import { View, Text, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
 import { useTheme } from '../../hooks';
 import type { Event } from '../../types';
@@ -39,14 +40,11 @@ export function WeekView({ selectedDate, events, onDatePress, onEventPress }: We
 
   const eventsByDay = useMemo(() => {
     const map = new Map<string, typeof events>();
-    for (const event of events) {
-      const key = event.start_date.split('T')[0];
-      const existing = map.get(key) ?? [];
-      existing.push(event);
-      map.set(key, existing);
+    for (const day of weekDays) {
+      map.set(formatDateKey(day), events.filter(event => eventOccursOnDay(event, day)));
     }
     return map;
-  }, [events]);
+  }, [events, weekDays]);
 
   return (
     <View style={styles.container}>
@@ -102,10 +100,7 @@ export function WeekView({ selectedDate, events, onDatePress, onEventPress }: We
       </View>
 
       <FlatList
-        data={events.filter((e) => {
-          const eventDate = e.start_date.split('T')[0];
-          return weekDays.some((d) => formatDateKey(d) === eventDate);
-        })}
+        data={events.filter(event => weekDays.some(day => eventOccursOnDay(event, day)))}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => {
           const startTime = new Date(item.start_date).toLocaleTimeString([], {
@@ -122,7 +117,7 @@ export function WeekView({ selectedDate, events, onDatePress, onEventPress }: We
                 <Text style={[styles.eventTitle, { color: colors.text }]} numberOfLines={1}>
                   {item.title}
                 </Text>
-                <Text style={[styles.eventTime, { color: colors.textSecondary }]}>{startTime}</Text>
+                <Text style={[styles.eventTime, { color: colors.textSecondary }]}>{item.all_day ? 'All Day' : startTime}</Text>
               </View>
             </TouchableOpacity>
           );

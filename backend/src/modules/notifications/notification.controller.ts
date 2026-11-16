@@ -19,12 +19,17 @@ export class NotificationController {
   async removePushToken(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
       const userId = req.userId!;
-      const { token } = req.body as { token?: string };
+      const token = ((req.body as { token?: string } | undefined)?.token ?? req.query?.token) as string | undefined;
+      const mode = ((req.body as { mode?: string } | undefined)?.mode ?? req.query?.mode) as string | undefined;
       if (!token) {
         res.status(400).json({ message: 'Token is required' });
         return;
       }
-      await notificationService.removePushToken(userId, token);
+      if (mode === 'deactivate') {
+        await notificationService.deactivatePushToken(userId, token);
+      } else {
+        await notificationService.removePushToken(userId, token);
+      }
       res.json({ message: 'Push token removed' });
     } catch (error) {
       next(error);

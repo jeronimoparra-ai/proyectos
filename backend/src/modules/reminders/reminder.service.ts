@@ -13,7 +13,8 @@ export class ReminderService {
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
-    return data ?? [];
+    const reminders = (data ?? []) as Array<{ id: string; [key: string]: unknown }>;
+    return reminders;
   }
 
   async listUpcoming(userId: string, days: number = 7) {
@@ -35,7 +36,8 @@ export class ReminderService {
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
-    return data ?? [];
+    const reminders = (data ?? []) as Array<{ id: string; [key: string]: unknown }>;
+    return reminders;
   }
 
   async create(userId: string, input: CreateReminderInput) {
@@ -63,7 +65,8 @@ export class ReminderService {
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
-    return data;
+    const createdReminder = data as { id: string; [key: string]: unknown };
+    return createdReminder;
   }
 
   async update(userId: string, reminderId: string, input: UpdateReminderInput) {
@@ -88,7 +91,8 @@ export class ReminderService {
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
-    return data;
+    const updatedReminder = data as { id: string; [key: string]: unknown };
+    return updatedReminder;
   }
 
   async delete(userId: string, reminderId: string) {
@@ -107,6 +111,48 @@ export class ReminderService {
     const { error } = await supabase
       .from('reminders')
       .update({ is_sent: true })
+      .eq('id', reminderId);
+
+    if (error) throw createAppError(error.message, 500, 'DB_ERROR');
+  }
+
+  /** Temp failures: bump attempts and keep last_error. */
+  async incrementAttempts(reminderId: string, error: string) {
+    const { data, error: getError } = await supabase
+      .from('reminders')
+      .select('attempts')
+      .eq('id', reminderId)
+      .single();
+    if (getError) throw createAppError(getError.message, 500, 'DB_ERROR');
+    const next = (data?.attempts ?? 0) + 1;
+    const { error: updateError } = await supabase
+      .from('reminders')
+      .update({ attempts: next, last_error: error })
+      .eq('id', reminderId);
+    // eslint-disable-next-line no-console
+    console.log('[worker] reminder.service incrementAttempts: reminderId:', reminderId, 'next:', next, 'updateError:', updateError?.message);
+    if (updateError) throw createAppError(updateError.message, 500, 'DB_ERROR');
+  }
+
+  /** Record last_error without touching the attempts counter (used for
+   * acceptance-before-receipt: the worker re-reserves for the receipt poll). */
+  async updateLastError(reminderId: string, error: string) {
+    const { error: updateError } = await supabase
+      .from('reminders')
+      .update({ last_error: error })
+      .eq('id', reminderId);
+    if (updateError) throw createAppError(updateError.message, 500, 'DB_ERROR');
+  }
+
+  /**
+   * Delivered or dead-lettered (maximum retries reached).
+   * `is_sent=true` => the worker never re-forwards this reminder anymore
+   * (persistent processing marker for historical/previous reminders).
+   */
+  async markDone(reminderId: string) {
+    const { error } = await supabase
+      .from('reminders')
+      .update({ is_sent: true, claimed_at: null, attempts: 0, last_error: null })
       .eq('id', reminderId);
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');

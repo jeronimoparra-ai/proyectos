@@ -36,6 +36,7 @@ interface AcademicTaskState {
   researchTopic: (topic: string, context?: string) => Promise<void>;
   clearSearchResults: () => void;
   clearSelectedTask: () => void;
+  reset: () => void;
 }
 
 export const useAcademicTaskStore = create<AcademicTaskState>((set, get) => ({
@@ -134,4 +135,18 @@ export const useAcademicTaskStore = create<AcademicTaskState>((set, get) => ({
   clearSearchResults: () => set({ searchResults: [] }),
 
   clearSelectedTask: () => set({ selectedTask: null, searchResults: [] }),
+
+  reset: () =>
+    set({
+      tasks: [],
+      total: 0,
+      page: 1,
+      filters: {},
+      isLoading: false,
+      isProcessing: false,
+      isSearching: false,
+      error: null,
+      selectedTask: null,
+      searchResults: [],
+    }),
 }));

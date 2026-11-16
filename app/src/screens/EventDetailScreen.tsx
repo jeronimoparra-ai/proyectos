@@ -48,7 +48,9 @@ export function EventDetailScreen({ navigation, route }: Props) {
     navigation.navigate('EventForm', { eventId });
   };
 
-  const startDate = selectedEvent ? new Date(selectedEvent.start_date) : new Date();
+  const startDate = selectedEvent ? new Date(selectedEvent.all_day && selectedEvent.source === 'google'
+    ? `${selectedEvent.start_date.slice(0, 10)}T12:00:00`
+    : selectedEvent.start_date) : new Date();
   const endDate = selectedEvent ? new Date(selectedEvent.end_date) : new Date();
 
   const formatDate = (date: Date) =>

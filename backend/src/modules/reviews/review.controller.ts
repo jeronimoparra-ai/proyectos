@@ -8,8 +8,10 @@ export class ReviewController {
   async recordReview(req: Request, res: Response, next: NextFunction) {
     try {
       const authReq = req as AuthenticatedRequest;
-      const result = await reviewService.recordReview(authReq.userId!, req.body as CreateReviewInput);
-      res.status(201).json(result);
+      const input = req.body as CreateReviewInput;
+      const result = await reviewService.recordReview(authReq.userId!, input);
+      const statusCode = result.isDuplicate ? 200 : 201;
+      res.status(statusCode).json(result);
     } catch (error) {
       next(error);
     }

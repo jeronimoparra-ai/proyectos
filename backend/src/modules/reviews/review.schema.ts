@@ -5,6 +5,7 @@ export const createReviewSchema = z.object({
   quality: z.number().int().min(0).max(5, 'Quality must be between 0 and 5'),
   difficulty: z.number().min(0).max(1).optional(),
   time_spent_seconds: z.number().int().positive().optional(),
+  idempotency_key: z.string().uuid().optional(),
 });
 
 export const getDueReviewsSchema = z.object({

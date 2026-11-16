@@ -25,6 +25,7 @@ interface TaskState {
   completeTask: (id: string) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
   clearSelectedTask: () => void;
+  reset: () => void;
 }
 
 export const useTaskStore = create<TaskState>((set, get) => ({
@@ -95,4 +96,15 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   },
 
   clearSelectedTask: () => set({ selectedTask: null }),
+
+  reset: () =>
+    set({
+      tasks: [],
+      total: 0,
+      page: 1,
+      filters: {},
+      isLoading: false,
+      error: null,
+      selectedTask: null,
+    }),
 }));

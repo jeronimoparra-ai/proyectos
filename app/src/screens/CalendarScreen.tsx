@@ -1,3 +1,4 @@
+import { eventOccursOnDay } from '../components/calendar/event-days';
 import { useEffect, useState } from 'react';
 import {
   View,
@@ -68,14 +69,7 @@ export function CalendarScreen({ navigation }: TabScreenProps<'Calendar'>) {
     navigation.navigate('EventForm', { eventId: undefined });
   };
 
-  const todayEvents = events.filter((event) => {
-    const eventDate = new Date(event.start_date);
-    return (
-      eventDate.getDate() === selectedDate.getDate() &&
-      eventDate.getMonth() === selectedDate.getMonth() &&
-      eventDate.getFullYear() === selectedDate.getFullYear()
-    );
-  });
+  const todayEvents = events.filter(event => eventOccursOnDay(event, selectedDate));
 
   const navigatePrev = viewMode === 'Month' ? handlePrevMonth : handlePrevWeek;
   const navigateNext = viewMode === 'Month' ? handleNextMonth : handleNextWeek;

@@ -6,13 +6,31 @@ import { useAuthStore } from '../store/useAuthStore';
 import { supabase } from '../services/supabase';
 
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
+  handleNotification: async (notification) => {
+    const currentUser = useAuthStore.getState().user;
+    const recipientUserId = notification.request.content.data?.recipientUserId as string | undefined;
+
+    // Protección frente a asociaciones obsoletas:
+    // Si no hay usuario activo o el destinatario garantizado no coincide con el usuario logueado,
+    // silenciar y ocultar la notificación completamente.
+    if (!currentUser || (recipientUserId && recipientUserId !== currentUser.id)) {
+      return {
+        shouldShowAlert: false,
+        shouldPlaySound: false,
+        shouldSetBadge: false,
+        shouldShowBanner: false,
+        shouldShowList: false,
+      };
+    }
+
+    return {
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    };
+  },
 });
 
 export function usePushNotifications() {
@@ -21,6 +39,7 @@ export function usePushNotifications() {
 
   const registerForPushNotifications = useCallback(async () => {
     if (!user || !supabase) return;
+    const registrationUserId = user.id;
 
     try {
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
@@ -37,7 +56,15 @@ export function usePushNotifications() {
       }
 
       const tokenData = await Notifications.getExpoPushTokenAsync();
+
+      // Guard: descartar respuesta tardía si la sesión cambió o se cerró durante el registro
+      const current = useAuthStore.getState().user;
+      if (!current || current.id !== registrationUserId) {
+        return;
+      }
+
       expoPushToken.current = tokenData.data;
+      notificationService.setDevicePushToken(tokenData.data);
 
       if (Platform.OS === 'android') {
         await Notifications.setNotificationChannelAsync('default', {
@@ -56,6 +83,9 @@ export function usePushNotifications() {
       } catch (err) {
         console.warn('[usePushNotifications] Failed to register push token with backend:', err);
       }
+
+      // Procesar desvinculaciones o bajas previas encoladas offline
+      await notificationService.flushPendingOperations().catch(() => {});
     } catch (err) {
       console.warn('[usePushNotifications] Error during push notification setup:', err);
     }
@@ -67,12 +97,24 @@ export function usePushNotifications() {
     registerForPushNotifications();
 
     const subscription = Notifications.addNotificationReceivedListener((notification) => {
+      const currentUser = useAuthStore.getState().user;
+      const recipientUserId = notification.request.content.data?.recipientUserId as string | undefined;
+      if (recipientUserId && currentUser && recipientUserId !== currentUser.id) {
+        // Ignorar notificación de usuario anterior
+        return;
+      }
       console.log('Notification received:', notification.request.content);
     });
 
     const responseSubscription = Notifications.addNotificationResponseReceivedListener(
       (response) => {
+        const currentUser = useAuthStore.getState().user;
         const data = response.notification.request.content.data;
+        const recipientUserId = data?.recipientUserId as string | undefined;
+        if (recipientUserId && currentUser && recipientUserId !== currentUser.id) {
+          // No procesar tap de notificación obsoleta
+          return;
+        }
         console.log('Notification tapped:', data);
       }
     );

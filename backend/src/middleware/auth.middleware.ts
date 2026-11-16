@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { supabase } from '../database/supabase';
+import { createUserClient, runWithUserClient } from '../database/supabase';
 import { createAppError } from './error.middleware';
 
 export interface AuthenticatedRequest extends Request {
@@ -20,14 +20,15 @@ export async function authMiddleware(
 
     const token = authHeader.split(' ')[1];
 
-    const { data, error } = await supabase.auth.getUser(token);
+    const client = createUserClient(token);
+    const { data, error } = await client.auth.getUser(token);
 
     if (error || !data.user) {
       throw createAppError('Invalid or expired token', 401, 'UNAUTHORIZED');
     }
 
     req.userId = data.user.id;
-    next();
+    runWithUserClient(client, data.user.id, () => next(), token);
   } catch (error) {
     next(error);
   }
