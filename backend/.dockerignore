@@ -1,0 +1,10 @@
+# Nada de secretos ni artefactos locales entran al contexto de build.
+node_modules
+dist
+coverage
+.env
+.env.*
+!.env.example
+src/__tests__
+**/*.test.ts
+*.log

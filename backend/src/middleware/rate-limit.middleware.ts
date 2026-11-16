@@ -1,5 +1,5 @@
 import { Request } from 'express';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import type { AuthenticatedRequest } from './auth.middleware';
 
 interface RateLimitConfig {
@@ -23,6 +23,10 @@ export function createRateLimiter(config: RateLimitConfig) {
 }
 
 // Atajo para el caso habitual: limitar por usuario y caer a IP si falta.
+// ipKeyGenerator normaliza IPv6 a su prefijo /64: sin el, un cliente puede
+// rotar direcciones dentro de su /64 y multiplicar su cuota.
 export function userKey(req: Request): string {
-  return (req as AuthenticatedRequest).userId ?? req.ip ?? 'unknown';
+  const userId = (req as AuthenticatedRequest).userId;
+  if (userId) return userId;
+  return req.ip ? ipKeyGenerator(req.ip) : 'unknown';
 }

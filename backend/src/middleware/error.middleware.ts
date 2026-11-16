@@ -16,15 +16,18 @@ export function errorHandler(err: AppError, _req: Request, res: Response, _next:
   const statusCode = err.statusCode ?? 500;
   const message = err.message ?? 'Internal server error';
 
-  if (process.env.NODE_ENV === 'development') {
-    console.error(`[Error] ${statusCode}: ${message}`, err.stack);
-  }
+  // El detalle real (mensajes de Postgres, cuerpos de OpenRouter, stacks) solo
+  // va al log del servidor: devolverlo al cliente filtra internals.
+  console.error(`[Error] ${statusCode}: ${message}`, err.stack);
+
+  // Los errores 5xx se responden con un mensaje generico; los 4xx son
+  // intencionados (validacion, auth) y si son utiles para el usuario.
+  const isServerError = statusCode >= 500;
 
   res.status(statusCode).json({
     error: {
-      message,
-      code: err.code,
-      ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+      message: isServerError ? 'Internal server error' : message,
+      code: isServerError ? 'INTERNAL_ERROR' : err.code,
     },
   });
 }
