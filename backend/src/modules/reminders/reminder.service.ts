@@ -13,7 +13,8 @@ export class ReminderService {
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
-    return (data ?? []) as Array<{ id: string; [key: string]: unknown }>;
+    const reminders = (data ?? []) as Array<{ id: string; [key: string]: unknown }>;
+    return reminders;
   }
 
   async listUpcoming(userId: string, days: number = 7) {
@@ -35,7 +36,8 @@ export class ReminderService {
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
-    return (data ?? []) as Array<{ id: string; [key: string]: unknown }>;
+    const reminders = (data ?? []) as Array<{ id: string; [key: string]: unknown }>;
+    return reminders;
   }
 
   async create(userId: string, input: CreateReminderInput) {
@@ -63,7 +65,8 @@ export class ReminderService {
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
-    return data as { id: string; [key: string]: unknown };
+    const createdReminder = data as { id: string; [key: string]: unknown };
+    return createdReminder;
   }
 
   async update(userId: string, reminderId: string, input: UpdateReminderInput) {
@@ -88,7 +91,8 @@ export class ReminderService {
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
-    return data as { id: string; [key: string]: unknown };
+    const updatedReminder = data as { id: string; [key: string]: unknown };
+    return updatedReminder;
   }
 
   async delete(userId: string, reminderId: string) {

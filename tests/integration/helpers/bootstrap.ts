@@ -22,6 +22,10 @@ export const MIGRATION_FILES = [
 ] as const;
 
 export async function resetPublicSchema(client: PoolClient | Pool): Promise<void> {
+  // Test de cada módulo deja role authenticated/service_role; el primer paso de
+  // cada archivo de tests debe volver al rol del superusuario (creador).
+  await client.query(`RESET ROLE`);
+  await client.query(`SELECT set_config('request.jwt.claim.sub', NULL, false)`);
   await client.query(`
     DROP SCHEMA IF EXISTS public CASCADE;
     DROP SCHEMA IF EXISTS auth CASCADE;

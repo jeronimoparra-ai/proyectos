@@ -112,7 +112,7 @@ export class EventService {
   async syncFromGoogle(userId: string, _legacyEvents?: unknown) {
     const { googleCalendarService } = await import('../google/google-calendar.service');
     const result = await googleCalendarService.syncEvents(userId);
-    return result as { message: string; total: number };
+    return result;
   }
 }
 

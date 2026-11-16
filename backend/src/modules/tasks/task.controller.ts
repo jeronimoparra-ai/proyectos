@@ -20,9 +20,9 @@ export class TaskController {
 
   async getById(req: Request, res: Response, next: NextFunction) {
     try {
-      const authReq = req as AuthenticatedRequest;
+      const userId = (req as AuthenticatedRequest).userId!;
       const id = getStringParam(req.params.id);
-      const result = await taskService.getById(authReq.userId!, id);
+      const result = await taskService.getById(userId, id);
       res.json(result);
     } catch (error) {
       next(error);
@@ -31,8 +31,8 @@ export class TaskController {
 
   async create(req: Request, res: Response, next: NextFunction) {
     try {
-      const authReq = req as AuthenticatedRequest;
-      const result = await taskService.create(authReq.userId!, req.body as CreateTaskInput);
+      const userId = (req as AuthenticatedRequest).userId!;
+      const result = await taskService.create(userId, req.body as CreateTaskInput);
       res.status(201).json(result);
     } catch (error) {
       next(error);
@@ -41,9 +41,9 @@ export class TaskController {
 
   async update(req: Request, res: Response, next: NextFunction) {
     try {
-      const authReq = req as AuthenticatedRequest;
+      const userId = (req as AuthenticatedRequest).userId!;
       const id = getStringParam(req.params.id);
-      const result = await taskService.update(authReq.userId!, id, req.body as UpdateTaskInput);
+      const result = await taskService.update(userId, id, req.body as UpdateTaskInput);
       res.json(result);
     } catch (error) {
       next(error);
@@ -52,9 +52,9 @@ export class TaskController {
 
   async delete(req: Request, res: Response, next: NextFunction) {
     try {
-      const authReq = req as AuthenticatedRequest;
+      const userId = (req as AuthenticatedRequest).userId!;
       const id = getStringParam(req.params.id);
-      const result = await taskService.softDelete(authReq.userId!, id);
+      const result = await taskService.softDelete(userId, id);
       res.json(result);
     } catch (error) {
       next(error);
@@ -63,9 +63,9 @@ export class TaskController {
 
   async complete(req: Request, res: Response, next: NextFunction) {
     try {
-      const authReq = req as AuthenticatedRequest;
+      const userId = (req as AuthenticatedRequest).userId!;
       const id = getStringParam(req.params.id);
-      const result = await taskService.complete(authReq.userId!, id);
+      const result = await taskService.complete(userId, id);
       res.json(result);
     } catch (error) {
       next(error);
@@ -74,8 +74,8 @@ export class TaskController {
 
   async getOverdue(req: Request, res: Response, next: NextFunction) {
     try {
-      const authReq = req as AuthenticatedRequest;
-      const result = await taskService.getOverdue(authReq.userId!);
+      const userId = (req as AuthenticatedRequest).userId!;
+      const result = await taskService.getOverdue(userId);
       res.json(result);
     } catch (error) {
       next(error);
@@ -84,10 +84,10 @@ export class TaskController {
 
   async getUpcoming(req: Request, res: Response, next: NextFunction) {
     try {
-      const authReq = req as AuthenticatedRequest;
+      const userId = (req as AuthenticatedRequest).userId!;
       const daysParam = getStringParam(req.query.days);
       const days = parseInt(daysParam) || 7;
-      const result = await taskService.getUpcoming(authReq.userId!, days);
+      const result = await taskService.getUpcoming(userId, days);
       res.json(result);
     } catch (error) {
       next(error);

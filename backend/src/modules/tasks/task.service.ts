@@ -57,7 +57,8 @@ export class TaskService {
       throw createAppError('Task not found', 404, 'TASK_NOT_FOUND');
     }
 
-    return data as { id: string; [key: string]: unknown };
+    const task = data as { id: string; [key: string]: unknown };
+    return task;
   }
 
   async create(userId: string, input: CreateTaskInput) {
@@ -72,8 +73,9 @@ export class TaskService {
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
     if (tags && tags.length > 0) {
+      const taskId = (data as { id: string }).id;
       const tagInserts = tags.map((tagId) => ({
-        task_id: data.id,
+        task_id: taskId,
         tag_id: tagId,
       }));
 
@@ -84,7 +86,8 @@ export class TaskService {
       if (tagError) throw createAppError(tagError.message, 500, 'DB_ERROR');
     }
 
-    return data as { id: string; [key: string]: unknown };
+    const createdTask = data as { id: string; [key: string]: unknown };
+    return createdTask;
   }
 
   async update(userId: string, taskId: string, input: UpdateTaskInput) {
@@ -122,7 +125,8 @@ export class TaskService {
       }
     }
 
-    return data as { id: string; [key: string]: unknown };
+    const updatedTask = data as { id: string; [key: string]: unknown };
+    return updatedTask;
   }
 
   async softDelete(userId: string, taskId: string) {

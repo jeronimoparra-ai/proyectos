@@ -48,7 +48,8 @@ export class NotificationService {
       .single();
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
-    return notification as { id: string; [key: string]: unknown };
+    const createdNotification = notification as { id: string; [key: string]: unknown };
+    return createdNotification;
   }
 
   // --- ENVÍO hacia Expo con timeout y manejo por token ---------------
@@ -270,9 +271,10 @@ export class NotificationService {
       .filter(Boolean) as string[];
 
     const delivered = tokenResults.some((r) => r.success);
-    if (notification.id) {
+    const notificationId = (notification as { id: string }).id;
+    if (notificationId) {
       await this.recordDeliveryReceipt(
-        notification.id,
+        notificationId,
         delivered ? 'delivered' : 'failed',
         messageIds,
         tokenResults
@@ -298,7 +300,7 @@ export class NotificationService {
         const clientTime = new Date(input.clientTimestamp).getTime();
         const existingTime = new Date(existing.updated_at).getTime();
         if (!isNaN(clientTime) && !isNaN(existingTime) && clientTime < existingTime) {
-          return existing as { user_id: string; active: boolean; updated_at: string };
+          return existing;
         }
       }
     }
@@ -320,7 +322,8 @@ export class NotificationService {
       .single();
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
-    return data as { user_id: string; token: string; platform: string; active: boolean; updated_at: string };
+    const registeredToken = data as { user_id: string; token: string; platform: string; active: boolean; updated_at: string };
+    return registeredToken;
   }
 
   // --- Desvinculación idempotente al cerrar sesión (T2) ----------------

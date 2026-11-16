@@ -73,7 +73,8 @@ export class ReviewService {
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
-    return (data ?? []) as Array<{ id: string; [key: string]: unknown }>;
+    const dueReviews = (data ?? []) as Array<{ id: string; [key: string]: unknown }>;
+    return dueReviews;
   }
 
   async getReviewHistory(userId: string, academicTaskId: string) {
@@ -87,7 +88,8 @@ export class ReviewService {
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 
-    return (data ?? []) as Array<{ id: string; [key: string]: unknown }>;
+    const history = (data ?? []) as Array<{ id: string; [key: string]: unknown }>;
+    return history;
   }
 
   async getReviewStats(userId: string) {
@@ -95,7 +97,7 @@ export class ReviewService {
       .from('academic_tasks')
       .select('id, next_review_at, review_count, total_reviews')
       .eq('user_id', userId)
-      .is('deleted_at', null) as { data: Array<{ id: string; next_review_at: string | null; review_count: number | null; total_reviews: number | null }> | null; error: Error | null };
+      .is('deleted_at', null);
 
     if (tasksError) throw createAppError(tasksError.message, 500, 'DB_ERROR');
 

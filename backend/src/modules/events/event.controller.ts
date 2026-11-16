@@ -70,7 +70,8 @@ export class EventController {
 
   async syncFromGoogle(req: Request, res: Response, next: NextFunction) {
     try {
-      const result = await eventService.syncFromGoogle((req as AuthenticatedRequest).userId!, req.body.events);
+      const userId = (req as AuthenticatedRequest).userId!;
+      const result = await eventService.syncFromGoogle(userId, req.body.events);
       res.json(result);
     } catch (error) {
       next(error);
