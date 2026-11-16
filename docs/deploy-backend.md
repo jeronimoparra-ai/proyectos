@@ -1,7 +1,7 @@
 # Despliegue del backend (API de Productivity App)
 
 El motor de IA vive en el **backend** (`backend/src/modules/ai/ai.service.ts` → OpenRouter,
-modelo `google/gemini-2.0-flash-001`), no en la app. Por eso la app solo puede usar IA,
+modelo `google/gemini-2.5-flash` (configurable con `OPENROUTER_MODEL`)), no en la app. Por eso la app solo puede usar IA,
 Google Calendar, búsqueda web y recordatorios push cuando la API está desplegada y el APK
 se compila con `EXPO_PUBLIC_API_URL` apuntando a ella.
 

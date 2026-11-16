@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { notificationService } from '../services/notification';
 import { useAuthStore } from '../store/useAuthStore';
@@ -55,7 +56,15 @@ export function usePushNotifications() {
         return;
       }
 
-      const tokenData = await Notifications.getExpoPushTokenAsync();
+      // SDK 57 exige el projectId de EAS para emitir el token; si no, lanza
+      // "An Expo project ID is required" y el push queda silenciosamente muerto.
+      const projectId =
+        Constants.expoConfig?.extra?.eas?.projectId ??
+        (Constants as { easConfig?: { projectId?: string } }).easConfig?.projectId;
+
+      const tokenData = await Notifications.getExpoPushTokenAsync(
+        projectId ? { projectId } : undefined,
+      );
 
       // Guard: descartar respuesta tardía si la sesión cambió o se cerró durante el registro
       const current = useAuthStore.getState().user;
