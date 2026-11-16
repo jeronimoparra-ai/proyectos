@@ -47,7 +47,7 @@ export class AcademicTaskService {
       throw createAppError('Academic task not found', 404, 'ACADEMIC_TASK_NOT_FOUND');
     }
 
-    return data as { id: string; [key: string]: unknown };
+    return data as { id: string; content?: string; study_materials?: Array<{ type: string; content: string }>; [key: string]: unknown };
   }
 
   async create(userId: string, input: CreateAcademicTaskInput) {
@@ -61,7 +61,7 @@ export class AcademicTaskService {
       p_content: taskData.content ?? null,
       p_materials: materials ?? [],
       p_topics: topics ?? [],
-    });
+    }) as { data: Array<{ id: string; [key: string]: unknown }> | null; error: Error | null };
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 

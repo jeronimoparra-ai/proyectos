@@ -35,7 +35,8 @@ describe('Academic Failure Fixtures (rollback atómico)', () => {
   it('create_academic_task_atomic revierte TODO en fallo (ni tarea, ni material)', async () => {
     const client = await pool.connect();
     try {
-      await client.query('BEGIN');
+      // Sin BEGIN: cada query se autentifica y ejecuta como transacción propia,
+      // garantizando que validate vea el estado real tras el rollback interno.
       await asUser(client, userId);
 
       // Materia con tipo inválido: viola study_materials_type_check.
@@ -50,15 +51,15 @@ describe('Academic Failure Fixtures (rollback atómico)', () => {
         )
       ).rejects.toThrow(/check|violates/i);
 
-      // Nada persistido: ni la tarea, ni los materiales.
+      // Nada persistido: ni la tarea, ni los materiales (transacción implícita hizo rollback).
+      await asUser(client, userId);
       const tasks = await client.query<{ c: number }>('SELECT COUNT(*)::int AS c FROM academic_tasks');
+      await asUser(client, userId);
       const materials = await client.query<{ c: number }>(
         'SELECT COUNT(*)::int AS c FROM study_materials'
       );
       expect(tasks.rows[0].c).toBe(0);
       expect(materials.rows[0].c).toBe(0);
-
-      await client.query('ROLLBACK');
     } finally {
       client.release();
     }
@@ -67,7 +68,6 @@ describe('Academic Failure Fixtures (rollback atómico)', () => {
   it('create_academic_task_atomic con user scope-mismatch rechaza sin escribir', async () => {
     const client = await pool.connect();
     try {
-      await client.query('BEGIN');
       await asUser(client, userId);
 
       const otherId = '00000000-0000-4000-8000-000000000001';
@@ -78,10 +78,9 @@ describe('Academic Failure Fixtures (rollback atómico)', () => {
         )
       ).rejects.toThrow(/scope mismatch|42501|not allowed/i);
 
+      await asUser(client, userId);
       const tasks = await client.query<{ c: number }>('SELECT COUNT(*)::int AS c FROM academic_tasks');
       expect(tasks.rows[0].c).toBe(0);
-
-      await client.query('ROLLBACK');
     } finally {
       client.release();
     }

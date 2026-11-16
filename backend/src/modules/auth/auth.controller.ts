@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { authService } from './auth.service';
 import type { RegisterInput, LoginInput, ForgotPasswordInput } from './auth.schema';
-import type { AuthenticatedRequest } from '../../middleware/auth.middleware';
 
 export class AuthController {
   async register(req: Request, res: Response, next: NextFunction) {

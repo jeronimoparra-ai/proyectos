@@ -99,6 +99,26 @@ export async function applyMigrations(
       throw new Error(`Migration failed: ${file}\n${message}`);
     }
   }
+
+  // Tras aplicar migraciones, vuelve a otorgar permisos análogos a Supabase
+  // (PUBLIC schema visible para authenticated, RLS decide filas), y luego
+  // re-aplica los REVOKE deliberados: tablas restringidas 005.
+  await client.query(`
+    GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated, service_role;
+    GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated, service_role;
+    GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO authenticated, service_role;
+  `);
+  // Re-aplica los REVOKE deliberados de 005/007 (capacidades solo service_role)
+  await client.query(`
+    REVOKE ALL ON public.calendar_integrations FROM PUBLIC, anon, authenticated;
+    REVOKE ALL ON public.calendar_oauth_states FROM PUBLIC, anon, authenticated;
+  `);
+  await client.query(`
+    REVOKE EXECUTE ON public.import_calendar_events(uuid, uuid, jsonb) FROM PUBLIC, anon, authenticated;
+    REVOKE EXECUTE ON public.complete_calendar_connection(uuid, text, text, jsonb) FROM PUBLIC, anon, authenticated;
+    REVOKE EXECUTE ON public.disconnect_calendar(uuid) FROM PUBLIC, anon, authenticated;
+    REVOKE EXECUTE ON public.claim_due_reminders(TEXT, INT, INT) FROM PUBLIC, anon, authenticated;
+  `);
 }
 
 export async function prepareCleanDatabase(client: PoolClient | Pool): Promise<void> {

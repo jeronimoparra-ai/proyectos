@@ -11,8 +11,9 @@ import { getStringParam, parseQuery } from '../../utils/helpers';
 export class AcademicTaskController {
   async list(req: Request, res: Response, next: NextFunction) {
     try {
+      const authReq = req as AuthenticatedRequest;
       const result = await academicTaskService.list(
-        (req as AuthenticatedRequest).userId!,
+        authReq.userId!,
         parseQuery<AcademicTaskQueryInput>(req.query as Record<string, unknown>)
       );
       res.json(result);
@@ -23,8 +24,9 @@ export class AcademicTaskController {
 
   async getById(req: Request, res: Response, next: NextFunction) {
     try {
+      const authReq = req as AuthenticatedRequest;
       const id = getStringParam(req.params.id);
-      const result = await academicTaskService.getById((req as AuthenticatedRequest).userId!, id);
+      const result = await academicTaskService.getById(authReq.userId!, id);
       res.json(result);
     } catch (error) {
       next(error);
@@ -33,8 +35,9 @@ export class AcademicTaskController {
 
   async create(req: Request, res: Response, next: NextFunction) {
     try {
+      const authReq = req as AuthenticatedRequest;
       const result = await academicTaskService.create(
-        (req as AuthenticatedRequest).userId!,
+        authReq.userId!,
         req.body as CreateAcademicTaskInput
       );
       res.status(201).json(result);
@@ -45,9 +48,10 @@ export class AcademicTaskController {
 
   async update(req: Request, res: Response, next: NextFunction) {
     try {
+      const authReq = req as AuthenticatedRequest;
       const id = getStringParam(req.params.id);
       const result = await academicTaskService.update(
-        (req as AuthenticatedRequest).userId!,
+        authReq.userId!,
         id,
         req.body as UpdateAcademicTaskInput
       );
@@ -59,8 +63,9 @@ export class AcademicTaskController {
 
   async delete(req: Request, res: Response, next: NextFunction) {
     try {
+      const authReq = req as AuthenticatedRequest;
       const id = getStringParam(req.params.id);
-      const result = await academicTaskService.softDelete((req as AuthenticatedRequest).userId!, id);
+      const result = await academicTaskService.softDelete(authReq.userId!, id);
       res.json(result);
     } catch (error) {
       next(error);
@@ -69,8 +74,9 @@ export class AcademicTaskController {
 
   async processWithAI(req: Request, res: Response, next: NextFunction) {
     try {
+      const authReq = req as AuthenticatedRequest;
       const id = getStringParam(req.params.id);
-      const result = await academicTaskService.processWithAI((req as AuthenticatedRequest).userId!, id);
+      const result = await academicTaskService.processWithAI(authReq.userId!, id);
       res.json(result);
     } catch (error) {
       next(error);

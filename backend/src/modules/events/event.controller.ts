@@ -19,8 +19,9 @@ export class EventController {
 
   async getById(req: Request, res: Response, next: NextFunction) {
     try {
+      const authReq = req as AuthenticatedRequest;
       const id = getStringParam(req.params.id);
-      const result = await eventService.getById((req as AuthenticatedRequest).userId!, id);
+      const result = await eventService.getById(authReq.userId!, id);
       res.json(result);
     } catch (error) {
       next(error);
