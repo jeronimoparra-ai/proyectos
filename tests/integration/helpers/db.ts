@@ -32,7 +32,7 @@ export function getTestPool(config: TestDatabaseConfig = defaultTestDbConfig): P
       user: config.user,
       password: config.password,
       max: 10,
-      idleTimeoutMillis: 30_000,
+      idleTimeoutMillis: 1_000,
       connectionTimeoutMillis: 10_000,
     });
     pool.on('error', (err) => {

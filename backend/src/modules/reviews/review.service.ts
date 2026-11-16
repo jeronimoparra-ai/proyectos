@@ -1,6 +1,5 @@
 import { supabase } from '../../database/supabase';
 import { createAppError } from '../../middleware/error.middleware';
-import { calculateSM2 } from '../../utils/sm2';
 import type { CreateReviewInput } from './review.schema';
 
 export class ReviewService {
