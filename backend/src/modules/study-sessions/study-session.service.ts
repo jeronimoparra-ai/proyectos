@@ -19,7 +19,7 @@ export class StudySessionService {
       .single();
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
-    return data;
+    return data as { id: string; [key: string]: unknown };
   }
 
   async getSessionById(userId: string, sessionId: string) {
@@ -33,7 +33,7 @@ export class StudySessionService {
     if (error || !data) {
       throw createAppError('Study session not found', 404, 'SESSION_NOT_FOUND');
     }
-    return data;
+    return data as { id: string; [key: string]: unknown };
   }
 
   async listSessions(userId: string, academicTaskId?: string) {
@@ -49,7 +49,7 @@ export class StudySessionService {
 
     const { data, error } = await query;
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
-    return data ?? [];
+    return (data ?? []) as Array<{ id: string; [key: string]: unknown }>;
   }
 
   async updateSession(userId: string, sessionId: string, input: UpdateStudySessionInput) {
@@ -76,7 +76,7 @@ export class StudySessionService {
       .single();
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
-    return data;
+    return data as { id: string; [key: string]: unknown };
   }
 
   async deleteSession(userId: string, sessionId: string) {

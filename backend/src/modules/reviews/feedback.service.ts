@@ -1,6 +1,7 @@
 import { supabase } from '../../database/supabase';
 import { createAppError } from '../../middleware/error.middleware';
 import { aiService } from '../ai/ai.service';
+import type { AIExplanationResult } from '../ai/ai.service';
 
 interface FeedbackData {
   tasksCompleted: number;
@@ -118,7 +119,7 @@ Provide recommendations as a JSON array of strings:
       const response = await aiService.explainConcept(
         'weekly study recommendations',
         prompt
-      );
+      ) as AIExplanationResult;
 
       const cleaned = response.explanation.replace(/```json\n?|\n?```/g, '').trim();
       const parsed = JSON.parse(cleaned) as string[];

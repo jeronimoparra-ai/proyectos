@@ -24,7 +24,7 @@ interface PushPayload {
 }
 
 // Resultado por token de un envío a Expo (fallo por token, no global).
-interface TokenResult {
+export interface TokenResult {
   token: string;
   success: boolean;
   error: string | null;
