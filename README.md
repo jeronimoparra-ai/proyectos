@@ -24,15 +24,11 @@
 
 ### Descarga directa
 
-El APK se construye automáticamente en GitHub Actions y se publica como asset de una Release:
+El APK se construye automáticamente en GitHub Actions (rama `master`) y se publica como asset de la Release `apk-latest`. El asset se reescribe cada vez que se dispara `Build APK`, por lo que el enlace es estable:
 
 | Plataforma | Enlace de descarga |
 |------------|-------------------|
-| **Android** | **[Descargar APK](https://github.com/jeronimoparra-ai/proyectos/releases/latest/download/productivity-app.apk)** |
-
-> **Primera vez:** si el enlace devuelve 404, todavía no existe ninguna Release.
-> Ve a **Actions → Build APK → Run workflow** y espera unos 15 minutos.
-> A partir de ahí el enlace es siempre el mismo y apunta a la última compilación.
+| **Android** | **[Descargar APK](https://github.com/jeronimoparra-ai/proyectos/releases/download/apk-latest/productivity-app.apk)** |
 
 **Instalación en el teléfono:**
 
