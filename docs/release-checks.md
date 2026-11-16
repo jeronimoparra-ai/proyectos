@@ -17,8 +17,8 @@ Secrets requeridos (Settings → Secrets and variables → Actions):
 - `RELEASE_KEYSTORE_BASE64` — keystore en base64 (`base64 -w0 release.keystore`)
 - `RELEASE_KEYSTORE_PASSWORD` — contraseña del store y de la key
 
-Sin estos secrets el workflow avisa y compila un APK sin firmar para distribución real.
-También conviene `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` y
+**Sin estos secrets el workflow falla**: no se publica un APK sin firmar en la Release
+oficial. También conviene `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` y
 `EXPO_PUBLIC_API_URL`; si faltan, la app abre en pantalla «Configuración incompleta».
 El asset resultante se publica como `productivity-app.apk` en la Release `apk-latest`
 (`.../releases/download/apk-latest/productivity-app.apk`), que se reescribe en cada build.
@@ -30,7 +30,7 @@ Requisitos: `adb` en PATH, depuración USB activada y equipo autorizado.
 ```bash
 adb devices                                   # dispositivo listado como "device"
 wget -O productivity-app.apk \
-  https://github.com/jeronimoparra-ai/proyectos/releases/latest/download/productivity-app.apk
+  https://github.com/jeronimoparra-ai/proyectos/releases/download/apk-latest/productivity-app.apk
 adb install -r productivity-app.apk           # -r reinstala conservando datos
 ```
 
@@ -65,7 +65,7 @@ puede no coincidir — usar `grep -i productivity` o `grep jerodev`. Comprobar q
 - Google OAuth y la instalación/uso del APK real necesitan dispositivo físico: el CI/emulador no valida redirect URIs, keystore ni permisos reales.
 - APK firmado ≠ regresión completa en device: validar manualmente login, calendario (T3) y reminders (T5).
 - Sin EXPO_PUBLIC_* el APK se publica igualmente con pantalla de configuración incompleta.
-- Lint backend congelado con regresión guard (191 errores + 5 warnings); no es deuda resuelta.
+- Lint backend congelado con regresión guard (191 errores + 5 warnings de baseline); no es deuda resuelta.
 - expo-doctor no bloqueante (mismatch expo 57.0.32 vs ~57.0.33).
 - La keystore vive solo en secrets de CI; perderla impide actualizar la app instalada.
 

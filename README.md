@@ -216,47 +216,52 @@ cd app && npx expo start
 | POST | `/api/events` | Crear evento |
 | POST | `/api/reviews` | Registrar review SM-2 |
 | GET | `/api/reviews/due` | Obtener reviews pendientes |
-| POST | `/api/ai/process` | Procesar con IA |
+| POST | `/api/ai/summarize` | Resumir contenido con IA |
+| POST | `/api/ai/questions` | Generar preguntas de estudio |
+| POST | `/api/ai/explain` | Explicar un concepto |
 | POST | `/api/notifications/push-token` | Registrar push token |
+| DELETE | `/api/notifications/push-token` | Revocar push token |
 
 ---
 
 ## Estado Actual del Proyecto
 
-**Última actualización:** 10/11/2026
+**Última actualización:** 16/11/2026
 
 ### ✅ Qué está funcionando
 
-- Backend compila y pasa tests (21/21 vitest tests passing)
-- Tipos correctos en app y backend (`npm run typecheck` pasa en ambos)
-- ESLint configurado (aunque hay 119 errores por resolver en el código existente)
-- Módulo StudySessions creado en el backend
-- Timeouts agregados en llamadas de red
-- Backend desplegado en Render (plan free, actualmente en reposo)
-- APK compilable sin EAS mediante GitHub Actions, con enlace de descarga permanente
+| Componente | Estado |
+|---|---|
+| **API (backend)** | Desplegada en Render: <https://productivity-api-l40i.onrender.com/health> |
+| **Base de datos** | Supabase real, migraciones 001→009 aplicadas (18 tablas con RLS) |
+| **APK Android** | Firmado (esquema v2) y publicado en la Release `apk-latest` |
+| **IA** | OpenRouter con `google/gemini-2.5-flash` (modelo configurable con `OPENROUTER_MODEL`) |
+| **Tests** | Backend (unitarios) e integración (RLS, OAuth, sesión, push, migraciones) en CI |
+| **CI** | 6 jobs + gate de auditoría de dependencias de producción |
 
-### 🔧 Problema del APK: qué se encontró (10/11/2026)
+### 🐞 Bugs de producción corregidos (16/11/2026)
 
-El enlace de descarga anterior devolvía **404**: los artefactos de EAS caducan. Además el
-build se generaba con valores de ejemplo, lo que explica que la app no llegara a arrancar bien.
+1. **APK que no abría / enlace 404.** El build usaba valores de ejemplo y el enlace de EAS
+   caducaba. Ahora `EXPO_PUBLIC_*` se inyectan desde secrets, el enlace es estable
+   (`releases/download/apk-latest/productivity-app.apk`) y el APK va firmado.
+2. **Firma del APK.** `signingConfigs.release` se inyecta con `findProperty('RELEASE_*')`
+   (Gradle no expone propiedades personalizadas como variables) y las propiedades se añaden
+   con salto de línea inicial, porque `expo prebuild` no cierra `gradle.properties` (eso
+   rompía el autolinking de Expo).
+3. **Alta de usuarios en 500.** `handle_new_user()` era `SECURITY DEFINER` sin `search_path`;
+   `supabase_auth_admin` tiene `search_path=auth`, así que el `INSERT` buscaba
+   `auth.user_preferences`. Corregido en la migración 008.
+4. **403 en casi todas las tablas.** Las migraciones 001–003 no concedían privilegios a
+   `authenticated`/`service_role`. Corregido en la migración 009 (RLS sigue filtrando filas).
+5. **IA caída.** El modelo `google/gemini-2.0-flash-001` ya no existe en OpenRouter.
+6. **Rate limit inoperante** detrás del proxy de Render (faltaba `trust proxy`) y evadible por
+   IPv6; además los 5xx filtraban internals. Todo endurecido.
 
-Causas identificadas y corregidas:
+### ⏳ Pendiente
 
-1. **`app/src/config/env.ts` usaba `process.env[nombre]`.** Expo solo sustituye las
-   referencias literales (`process.env.EXPO_PUBLIC_X`); con acceso dinámico el valor queda
-   vacío en el dispositivo. La validación no podía pasar nunca en un build real.
-   Corregido con lecturas estáticas.
-2. **`app/eas.json` incluía `https://tu-proyecto.supabase.co` y `tu-anon-key` como si fueran
-   configuración real.** Como no estaban vacíos, la app se consideraba configurada y apuntaba
-   a un Supabase inexistente. Eliminados del perfil de build.
-3. **`validateEnv` solo comprobaba que la variable no estuviera vacía.** Ahora también rechaza
-   placeholders conocidos y dominios de ejemplo.
-4. **`ConfigErrorScreen.tsx` existía pero nadie lo usaba.** `App.tsx` tenía una copia inline
-   más pobre. Ahora se usa el componente real.
-
-**Pendiente de confirmar:** si el cierre instantáneo tenía además una causa nativa, hay que
-verlo con `adb logcat` en un dispositivo real. Ahora, sin configuración válida, la app muestra
-la pantalla de aviso en lugar de continuar con un backend falso.
+- **Google Calendar**: faltan `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` y registrar el
+  redirect real en Google Cloud. Sin ellas la app avisa, no rompe.
+- **Verificación en dispositivo**: instalar el APK y probar login, tareas, recordatorios y push.
 
 ### 🔐 Variables de entorno necesarias (nombres únicamente)
 
