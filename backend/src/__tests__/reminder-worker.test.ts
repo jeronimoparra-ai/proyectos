@@ -39,9 +39,11 @@ const dueReminder = {
 };
 
 function mockFromUpdate() {
-  updateEq.mockReset().mockResolvedValue({ error: null });
+  const final = Promise.resolve({ error: null });
+  updateEq.mockReset().mockReturnValue({ eq: vi.fn(() => final) });
   from.mockReturnValue({
     update: vi.fn().mockReturnValue({ eq: updateEq }),
+    select: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnThis(), single: vi.fn().mockResolvedValue({ data: { retry_count: 0 }, error: null }) }),
   });
 }
 
@@ -61,7 +63,7 @@ describe('reminder-worker (diseño nuevo: claim atómico vía RPC)', () => {
   });
 
   it('reclama un lote con claim_due_reminders y envía las notificaciones', async () => {
-    rpc.mockResolvedValue({ data: [dueReminder], error: null });
+    rpc.mockImplementation((name) => Promise.resolve({ data: name === 'renew_reminder_claim' ? true : [dueReminder], error: null }));
     sendReminderNotification.mockResolvedValue({
       delivered: true,
       notification: { id: 'notif-1' },
@@ -87,7 +89,7 @@ describe('reminder-worker (diseño nuevo: claim atómico vía RPC)', () => {
   });
 
   it('sin entrega registrada NO marca sent_at y deja el recordatorio pendiente', async () => {
-    rpc.mockResolvedValue({ data: [dueReminder], error: null });
+    rpc.mockImplementation((name) => Promise.resolve({ data: name === 'renew_reminder_claim' ? true : [dueReminder], error: null }));
     sendReminderNotification.mockResolvedValue({
       delivered: false,
       notification: { id: 'notif-1' },
@@ -97,25 +99,14 @@ describe('reminder-worker (diseño nuevo: claim atómico vía RPC)', () => {
     await flushTicks();
     await stopReminderWorker(50);
 
-    // no se marcó sent_at en ningún update sobre 'reminders'
-    const sentUpdates = updateEq.mock.calls.filter((c) => c[0] === 'id' && c[1] === 'rem-1');
-    // Puede haber updates de reintento/sent; verificamos que el update de sent_at no fijó is_sent
-    for (const call of sentUpdates) expect(call).toBeTruthy();
-    expect(rpc).toHaveBeenCalled();
+    const builder = from.mock.results[0].value;
+    expect(builder.update).toHaveBeenCalledWith(expect.objectContaining({ retry_count: 1, claimed_at: null, locked_by: null }));
+    expect(builder.update).not.toHaveBeenCalledWith(expect.objectContaining({ is_sent: true }));
   });
 
   it('ante un error del envío programa reintento con backoff (retry_count + 1)', async () => {
-    rpc.mockResolvedValue({ data: [dueReminder], error: null });
+    rpc.mockImplementation((name) => Promise.resolve({ data: name === 'renew_reminder_claim' ? true : [dueReminder], error: null }));
     sendReminderNotification.mockRejectedValue(new Error('expo caído'));
-
-    // scheduleRetry consulta retry_count primero
-    const maybeSingle = vi.fn().mockResolvedValue({ data: { retry_count: 0 }, error: null });
-    from.mockImplementation((table: string) => ({
-      update: vi.fn().mockReturnValue({ eq: updateEq }),
-      select: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({ single: maybeSingle }),
-      }),
-    }));
 
     startReminderWorker();
     await flushTicks();
@@ -124,6 +115,15 @@ describe('reminder-worker (diseño nuevo: claim atómico vía RPC)', () => {
     expect(rpc).toHaveBeenCalled();
     // Se escribió retry_at / retry_count+1
     expect(from).toHaveBeenCalledWith('reminders');
+  });
+
+  it('does not send after another worker takes the lease', async () => {
+    rpc.mockImplementation((name) => Promise.resolve({ data: name === 'renew_reminder_claim' ? false : [dueReminder], error: null }));
+    startReminderWorker();
+    await flushTicks();
+    await stopReminderWorker(50);
+    expect(sendReminderNotification).not.toHaveBeenCalled();
+    expect(from).not.toHaveBeenCalled();
   });
 
   it('startReminderWorker es idempotente y stop lo detiene', async () => {

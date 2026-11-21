@@ -456,3 +456,7 @@ jobs:
             --config ../tests/integration/vitest.config.mts \
             --reporter=verbose \
             tests/integration/scenarios/push-failure.test.ts
+
+      - name: Gate — P4 concurrent claims, reviews, tokens and SQL permissions
+        working-directory: backend
+        run: npx vitest run --config ../tests/integration/vitest.config.mts tests/integration/scenarios/backend-atomicity.test.ts

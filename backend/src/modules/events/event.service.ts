@@ -18,7 +18,7 @@ export class EventService {
 
     const offset = (query.page - 1) * query.limit;
     qb = qb.range(offset, offset + query.limit - 1);
-    qb = qb.order('start_date', { ascending: true });
+    qb = qb.order('start_date', { ascending: true }).order('id', { ascending: true });
 
     const { data, error, count } = await qb;
 

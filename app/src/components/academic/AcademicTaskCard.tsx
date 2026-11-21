@@ -1,15 +1,36 @@
+import { memo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../../hooks';
+import { cardStyles } from '../../theme/cardStyles';
 import { AnimatedPressable } from '../AnimatedPressable';
 import { IconBrain } from '../icons';
 import type { AcademicTask } from '../../types';
 
-interface AcademicTaskCardProps {
+export interface AcademicTaskCardProps {
   task: AcademicTask;
   onPress: (task: AcademicTask) => void;
 }
 
-export function AcademicTaskCard({ task, onPress }: AcademicTaskCardProps) {
+function areAcademicTaskCardPropsEqual(
+  prev: AcademicTaskCardProps,
+  next: AcademicTaskCardProps
+): boolean {
+  if (prev.task === next.task && prev.onPress === next.onPress) {
+    return true;
+  }
+  return (
+    prev.task.id === next.task.id &&
+    prev.task.title === next.task.title &&
+    prev.task.subject === next.task.subject &&
+    prev.task.summary === next.task.summary &&
+    prev.task.ai_processed_at === next.task.ai_processed_at &&
+    prev.task.key_ideas?.length === next.task.key_ideas?.length &&
+    prev.task.materials?.length === next.task.materials?.length &&
+    prev.onPress === next.onPress
+  );
+}
+
+export const AcademicTaskCard = memo(function AcademicTaskCard({ task, onPress }: AcademicTaskCardProps) {
   const { colors, borderRadius } = useTheme();
 
   const hasAIResult = !!task.ai_processed_at;
@@ -17,7 +38,7 @@ export function AcademicTaskCard({ task, onPress }: AcademicTaskCardProps) {
   return (
     <AnimatedPressable
       style={[
-        styles.container,
+        cardStyles.cardContainer,
         {
           backgroundColor: colors.surface,
           borderRadius: borderRadius.lg,
@@ -27,8 +48,8 @@ export function AcademicTaskCard({ task, onPress }: AcademicTaskCardProps) {
       accessibilityRole="button"
       accessibilityLabel={`Academic task: ${task.title}`}
     >
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
+      <View style={cardStyles.headerRow}>
+        <Text style={[cardStyles.titleText, { color: colors.text }]} numberOfLines={1}>
           {task.title}
         </Text>
         {hasAIResult && (
@@ -63,30 +84,9 @@ export function AcademicTaskCard({ task, onPress }: AcademicTaskCardProps) {
       </View>
     </AnimatedPressable>
   );
-}
+}, areAcademicTaskCardPropsEqual);
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    marginHorizontal: 16,
-    marginVertical: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: '600',
-    flex: 1,
-  },
   aiBadge: {
     flexDirection: 'row',
     alignItems: 'center',

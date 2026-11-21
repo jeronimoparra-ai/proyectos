@@ -1,8 +1,7 @@
-import { useRef, useEffect, useState, type ReactNode } from 'react';
+import { useRef, useEffect, type ReactNode } from 'react';
 import {
   Animated,
   Pressable,
-  AccessibilityInfo,
   type GestureResponderEvent,
   type StyleProp,
   type ViewStyle,
@@ -11,6 +10,7 @@ import {
   type AccessibilityState,
 } from 'react-native';
 import { animation } from '../theme/animation';
+import { useReducedMotion } from '../hooks';
 
 export interface AnimatedPressableProps {
   onPress?: (event: GestureResponderEvent) => void;
@@ -44,43 +44,57 @@ export function AnimatedPressable({
   accessibilityState,
   children,
 }: AnimatedPressableProps) {
-  const scale = useRef(new Animated.Value(1)).current;
-  const [reduceMotion, setReduceMotion] = useState(false);
+  const scaleRef = useRef<Animated.Value | null>(null);
+  if (!scaleRef.current) {
+    scaleRef.current = new Animated.Value(1);
+  }
+  const scale = scaleRef.current;
+
+  const activeAnimRef = useRef<Animated.CompositeAnimation | null>(null);
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
-    let isMounted = true;
-    AccessibilityInfo.isReduceMotionEnabled()
-      .then((enabled) => {
-        if (isMounted) setReduceMotion(enabled);
-      })
-      .catch(() => {});
-
     return () => {
-      isMounted = false;
+      if (activeAnimRef.current) {
+        activeAnimRef.current.stop();
+        activeAnimRef.current = null;
+      }
       scale.stopAnimation();
     };
   }, [scale]);
 
   const handlePressIn = (event: GestureResponderEvent) => {
     if (!disabled && !reduceMotion) {
-      Animated.spring(scale, {
+      if (activeAnimRef.current) {
+        activeAnimRef.current.stop();
+      }
+      activeAnimRef.current = Animated.spring(scale, {
         toValue: scaleTo,
         tension: animation.spring.press.tension,
         friction: animation.spring.press.friction,
         useNativeDriver: true,
-      }).start();
+      });
+      activeAnimRef.current.start(() => {
+        activeAnimRef.current = null;
+      });
     }
     onPressIn?.(event);
   };
 
   const handlePressOut = (event: GestureResponderEvent) => {
     if (!disabled && !reduceMotion) {
-      Animated.spring(scale, {
+      if (activeAnimRef.current) {
+        activeAnimRef.current.stop();
+      }
+      activeAnimRef.current = Animated.spring(scale, {
         toValue: animation.scale.normal,
         tension: animation.spring.press.tension,
         friction: animation.spring.press.friction,
         useNativeDriver: true,
-      }).start();
+      });
+      activeAnimRef.current.start(() => {
+        activeAnimRef.current = null;
+      });
     }
     onPressOut?.(event);
   };

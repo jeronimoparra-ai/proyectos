@@ -1,11 +1,11 @@
 import { useRef, useEffect, type ReactNode } from 'react';
 import {
   Animated,
-  AccessibilityInfo,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
 import { animation } from '../theme/animation';
+import { useReducedMotion } from '../hooks';
 
 export interface FadeSlideInProps {
   index?: number;
@@ -17,6 +17,9 @@ export interface FadeSlideInProps {
   children: ReactNode;
 }
 
+// Limitar animaciones simultaneas masivas en listados largos
+const MAX_ANIMATED_INDEX = 8;
+
 export function FadeSlideIn({
   index = 0,
   delay,
@@ -26,62 +29,69 @@ export function FadeSlideIn({
   style,
   children,
 }: FadeSlideInProps) {
-  const opacity = useRef(new Animated.Value(0)).current;
   const initialOffset =
     direction === 'up' || direction === 'left' ? slideDistance : -slideDistance;
-  const translate = useRef(new Animated.Value(initialOffset)).current;
+
+  // Lazy init de Animated.Value
+  const opacityRef = useRef<Animated.Value | null>(null);
+  if (!opacityRef.current) {
+    opacityRef.current = new Animated.Value(0);
+  }
+  const opacity = opacityRef.current;
+
+  const translateRef = useRef<Animated.Value | null>(null);
+  if (!translateRef.current) {
+    translateRef.current = new Animated.Value(initialOffset);
+  }
+  const translate = translateRef.current;
+
+  const reduceMotion = useReducedMotion();
+  const animRef = useRef<Animated.CompositeAnimation | null>(null);
 
   useEffect(() => {
-    let isMounted = true;
-    let anim: Animated.CompositeAnimation | null = null;
+    // Si reduce motion esta activo o el indice supera el limite de concurrencia,
+    // mostrar directamente sin disparar animaciones masivas
+    if (reduceMotion || index > MAX_ANIMATED_INDEX) {
+      opacity.setValue(1);
+      translate.setValue(0);
+      return;
+    }
 
-    AccessibilityInfo.isReduceMotionEnabled()
-      .then((reduced) => {
-        if (!isMounted) return;
-        if (reduced) {
-          opacity.setValue(1);
-          translate.setValue(0);
-          return;
-        }
+    const computedDelay =
+      delay !== undefined
+        ? delay
+        : Math.min(index * animation.staggerDelay, 250);
 
-        const computedDelay =
-          delay !== undefined
-            ? delay
-            : Math.min(index * animation.staggerDelay, 300);
+    const anim = Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration,
+        delay: computedDelay,
+        useNativeDriver: true,
+      }),
+      Animated.spring(translate, {
+        toValue: 0,
+        delay: computedDelay,
+        tension: animation.spring.gentle.tension,
+        friction: animation.spring.gentle.friction,
+        useNativeDriver: true,
+      }),
+    ]);
+    animRef.current = anim;
 
-        anim = Animated.parallel([
-          Animated.timing(opacity, {
-            toValue: 1,
-            duration,
-            delay: computedDelay,
-            useNativeDriver: true,
-          }),
-          Animated.spring(translate, {
-            toValue: 0,
-            delay: computedDelay,
-            tension: animation.spring.gentle.tension,
-            friction: animation.spring.gentle.friction,
-            useNativeDriver: true,
-          }),
-        ]);
-
-        anim.start();
-      })
-      .catch(() => {
-        if (!isMounted) return;
-        opacity.setValue(1);
-        translate.setValue(0);
-      });
+    anim.start(() => {
+      animRef.current = null;
+    });
 
     return () => {
-      isMounted = false;
-      if (anim) {
-        anim.stop();
+      if (animRef.current) {
+        animRef.current.stop();
+        animRef.current = null;
       }
       opacity.stopAnimation();
       translate.stopAnimation();
     };
-  }, [index, delay, duration, opacity, translate]);
+  }, [index, delay, duration, opacity, translate, reduceMotion]);
 
   const isHorizontal = direction === 'left' || direction === 'right';
   const transform = isHorizontal

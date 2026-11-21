@@ -1,0 +1,169 @@
+$ cd backend && npm run typecheck
+Exit code: 0
+
+> productivity-app-backend@1.0.0 typecheck
+> tsc --noEmit
+
+
+$ cd backend && npm test
+Exit code: 0
+
+> productivity-app-backend@1.0.0 test
+> vitest run
+
+
+ RUN  v4.1.12 /home/andresdev/orca/workspaces/proyectos/p4-backend-db-codex/backend
+
+
+ Test Files  9 passed (9)
+      Tests  75 passed (75)
+   Start at  19:08:49
+   Duration  4.93s (transform 1.94s, setup 0ms, import 3.49s, tests 4.77s, environment 6ms)
+
+
+$ cd backend && TEST_DB_PORT=55434 npm run test:integration
+Exit code: 0
+
+> productivity-app-backend@1.0.0 test:integration
+> vitest run --config ../tests/integration/vitest.config.mts
+
+
+ RUN  v4.1.12 /home/andresdev/orca/workspaces/proyectos/p4-backend-db-codex/backend
+
+[Integration Tests] Global setup starting...
+[Integration Tests] Database connection OK
+[Integration Tests] Global setup complete
+ ✓ ../tests/integration/scenarios/backend-atomicity.test.ts > P4 real PostgreSQL atomicity and isolation > rejects anon and missing subject for SECURITY DEFINER RPCs 7ms
+ ✓ ../tests/integration/scenarios/backend-atomicity.test.ts > P4 real PostgreSQL atomicity and isolation > serializes same-key concurrent reviews and counts one historical review 52ms
+ ✓ ../tests/integration/scenarios/backend-atomicity.test.ts > P4 real PostgreSQL atomicity and isolation > keeps history when SM-2 streak resets and rejects deleted tasks 26ms
+ ✓ ../tests/integration/scenarios/backend-atomicity.test.ts > P4 real PostgreSQL atomicity and isolation > claims only due, live, non-exhausted reminders; recovers expired claims 53ms
+ ✓ ../tests/integration/scenarios/backend-atomicity.test.ts > P4 real PostgreSQL atomicity and isolation > SKIP LOCKED gives disjoint batches while a prior claim is uncommitted 22ms
+ ✓ ../tests/integration/scenarios/backend-atomicity.test.ts > P4 real PostgreSQL atomicity and isolation > atomically reassigns tokens, ignores stale registration, isolates late logout 15ms
+ ✓ ../tests/integration/scenarios/backend-atomicity.test.ts > P4 real PostgreSQL atomicity and isolation > does not overwrite a local event on an external identity conflict 13ms
+ ✓ ../tests/integration/scenarios/backend-atomicity.test.ts > P4 real PostgreSQL atomicity and isolation > returns full aggregate stats beyond the API row cap with owner isolation 69ms
+ ✓ ../tests/integration/scenarios/backend-atomicity.test.ts > P4 real PostgreSQL atomicity and isolation > serializes concurrent push registrations using the unique token constraint 10ms
+ ✓ ../tests/integration/scenarios/backend-atomicity.test.ts > P4 real PostgreSQL atomicity and isolation > rejects a stale worker lease and prevents stale completion overwrites 15ms
+ ✓ ../tests/integration/scenarios/session-change.test.ts > Session Change Fixtures (push token ownership) > A inserta token; A ve 1 fila; B no ve ninguna; A UPDATE lo marca inactive; B UPDATE afecta 0 29ms
+ ✓ ../tests/integration/scenarios/session-change.test.ts > Session Change Fixtures (push token ownership) > UNIQUE(token): B no puede por|ser registrar el token que ya tiene A 12ms
+ ✓ ../tests/integration/scenarios/session-change.test.ts > Session Change Fixtures (push token ownership) > service_role reasigna el token de A a B vía upsert (contrato registerPushToken) 31ms
+ ✓ ../tests/integration/scenarios/academic-review-failure.test.ts > Academic Failure Fixtures (rollback atómico) > create_academic_task_atomic revierte TODO en fallo (ni tarea, ni material) 22ms
+ ✓ ../tests/integration/scenarios/academic-review-failure.test.ts > Academic Failure Fixtures (rollback atómico) > create_academic_task_atomic con user scope-mismatch rechaza sin escribir 8ms
+ ✓ ../tests/integration/scenarios/account-isolation.test.ts > Account Isolation (RLS) > Usuario B no lee tareas de Usuario A 18ms
+ ✓ ../tests/integration/scenarios/account-isolation.test.ts > Account Isolation (RLS) > Usuario A sí lee sus propias tareas 7ms
+ ✓ ../tests/integration/scenarios/account-isolation.test.ts > Account Isolation (RLS) > Usuario B no puede insertar tarea con user_id de A 9ms
+ ✓ ../tests/integration/scenarios/account-isolation.test.ts > Account Isolation (RLS) > Usuario B no lee academic_tasks de A 7ms
+ ✓ ../tests/integration/scenarios/account-isolation.test.ts > Account Isolation (RLS) > Usuario B no lee push_tokens de A 13ms
+ ✓ ../tests/integration/scenarios/oauth-failure.test.ts > OAuth Failure Fixtures > rechaza complete_calendar_connection con state caducado 10ms
+ ✓ ../tests/integration/scenarios/oauth-failure.test.ts > OAuth Failure Fixtures > rechaza state ya consumido (replay) 25ms
+ ✓ ../tests/integration/scenarios/oauth-failure.test.ts > OAuth Failure Fixtures > authenticated no puede leer calendar_oauth_states (service_role only) 20ms
+ ✓ ../tests/integration/scenarios/oauth-failure.test.ts > OAuth Failure Fixtures > PENDIENTE dispositivo: intercambio Google OAuth real no ejecutado aquí (solo SQL/simulado) 0ms
+ ✓ ../tests/integration/scenarios/migration-update.test.ts > Migration Update > preserva tareas existentes tras migraciones incrementales 5ms
+ ✓ ../tests/integration/scenarios/migration-update.test.ts > Migration Update > 013 restores historical counts from preexisting reviews without changing the streak 8ms
+ ✓ ../tests/integration/scenarios/migration-update.test.ts > Migration Update > crea tablas nuevas sin borrar datos previos 2ms
+ ✓ ../tests/integration/scenarios/migration-update.test.ts > Migration Update > añade columnas de worker/SM-2 sobre schema previo 12ms
+ ✓ ../tests/integration/scenarios/api-db-integration.test.ts > API/DB Integration (SQL contract) > CRUD tasks: insert/select/update/soft-delete 10ms
+ ✓ ../tests/integration/scenarios/api-db-integration.test.ts > API/DB Integration (SQL contract) > RPC create_academic_task_atomic crea task + materials + topics 8ms
+ ✓ ../tests/integration/scenarios/api-db-integration.test.ts > API/DB Integration (SQL contract) > CHECK constraints rechazan status/priority inválidos 15ms
+ ✓ ../tests/integration/scenarios/api-db-integration.test.ts > API/DB Integration (SQL contract) > FK reminder ownership (004) bloquea task_id de otro usuario 19ms
+ ✓ ../tests/integration/scenarios/migration-clean.test.ts > Migration Clean > aplica las 11 migraciones sin error en BD vacía 2ms
+ ✓ ../tests/integration/scenarios/migration-clean.test.ts > Migration Clean > crea tablas core esperadas 6ms
+ ✓ ../tests/integration/scenarios/migration-clean.test.ts > Migration Clean > habilita RLS en tablas de usuario 1ms
+ ✓ ../tests/integration/scenarios/migration-clean.test.ts > Migration Clean > expone RPCs de integridad (review + claim reminders) 2ms
+ ✓ ../tests/integration/scenarios/push-failure.test.ts > Push Failure Fixtures (SQL real) > El único(token) global se respeta 5ms
+ ✓ ../tests/integration/scenarios/push-failure.test.ts > Push Failure Fixtures (SQL real) > RLS prohíbe que B lea/actualice/borre tokens de A; A puede 7ms
+ ✓ ../tests/integration/scenarios/push-failure.test.ts > Push Failure Fixtures (SQL real) > service_role reemplaza token de plataforma pendiente/abandonado mediante upsert 4ms
+
+ Test Files  9 passed (9)
+      Tests  39 passed (39)
+   Start at  19:08:47
+   Duration  9.45s (transform 153ms, setup 0ms, import 860ms, tests 6.32s, environment 1ms)
+
+
+$ cd backend && npm run lint
+Exit code: 1
+
+> productivity-app-backend@1.0.0 lint
+> eslint src
+
+
+/home/andresdev/orca/workspaces/proyectos/p4-backend-db-codex/backend/src/__tests__/academic-task-atomic.test.ts
+  0:0  error  Parsing error: "parserOptions.project" has been provided for @typescript-eslint/parser.
+The file was not found in any of the provided project(s): src/__tests__/academic-task-atomic.test.ts
+
+/home/andresdev/orca/workspaces/proyectos/p4-backend-db-codex/backend/src/__tests__/helpers.test.ts
+  0:0  error  Parsing error: "parserOptions.project" has been provided for @typescript-eslint/parser.
+The file was not found in any of the provided project(s): src/__tests__/helpers.test.ts
+
+/home/andresdev/orca/workspaces/proyectos/p4-backend-db-codex/backend/src/__tests__/migrations-search-path.test.ts
+  0:0  error  Parsing error: "parserOptions.project" has been provided for @typescript-eslint/parser.
+The file was not found in any of the provided project(s): src/__tests__/migrations-search-path.test.ts
+
+/home/andresdev/orca/workspaces/proyectos/p4-backend-db-codex/backend/src/__tests__/mobile-push-session.test.ts
+  0:0  error  Parsing error: "parserOptions.project" has been provided for @typescript-eslint/parser.
+The file was not found in any of the provided project(s): src/__tests__/mobile-push-session.test.ts
+
+/home/andresdev/orca/workspaces/proyectos/p4-backend-db-codex/backend/src/__tests__/notification.test.ts
+  0:0  error  Parsing error: "parserOptions.project" has been provided for @typescript-eslint/parser.
+The file was not found in any of the provided project(s): src/__tests__/notification.test.ts
+
+/home/andresdev/orca/workspaces/proyectos/p4-backend-db-codex/backend/src/__tests__/rate-limit.test.ts
+  0:0  error  Parsing error: "parserOptions.project" has been provided for @typescript-eslint/parser.
+The file was not found in any of the provided project(s): src/__tests__/rate-limit.test.ts
+
+/home/andresdev/orca/workspaces/proyectos/p4-backend-db-codex/backend/src/__tests__/reminder-worker.test.ts
+  0:0  error  Parsing error: "parserOptions.project" has been provided for @typescript-eslint/parser.
+The file was not found in any of the provided project(s): src/__tests__/reminder-worker.test.ts
+
+/home/andresdev/orca/workspaces/proyectos/p4-backend-db-codex/backend/src/__tests__/sm2.test.ts
+  0:0  error  Parsing error: "parserOptions.project" has been provided for @typescript-eslint/parser.
+The file was not found in any of the provided project(s): src/__tests__/sm2.test.ts
+
+/home/andresdev/orca/workspaces/proyectos/p4-backend-db-codex/backend/src/modules/google/google-calendar.service.test.ts
+  0:0  error  Parsing error: "parserOptions.project" has been provided for @typescript-eslint/parser.
+The file was not found in any of the provided project(s): src/modules/google/google-calendar.service.test.ts
+
+/home/andresdev/orca/workspaces/proyectos/p4-backend-db-codex/backend/src/modules/reminders/reminder-checker.ts
+   89:33  error    Promise returned in function argument where a void return was expected             @typescript-eslint/no-misused-promises
+   94:27  error    Promise returned in function argument where a void return was expected             @typescript-eslint/no-misused-promises
+  116:3   warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+
+/home/andresdev/orca/workspaces/proyectos/p4-backend-db-codex/backend/src/modules/reminders/reminder.service.ts
+  134:5  warning  Unexpected console statement. Only these console methods are allowed: warn, error  no-console
+
+/home/andresdev/orca/workspaces/proyectos/p4-backend-db-codex/backend/src/modules/reviews/feedback.service.ts
+  52:43  error  Unsafe argument of type `any` assigned to a parameter of type `string`  @typescript-eslint/no-unsafe-argument
+
+/home/andresdev/orca/workspaces/proyectos/p4-backend-db-codex/backend/src/modules/tasks/task.service.ts
+  67:12  error  This assertion is unnecessary since it does not change the type of the expression  @typescript-eslint/no-unnecessary-type-assertion
+
+/home/andresdev/orca/workspaces/proyectos/p4-backend-db-codex/backend/src/server.ts
+  22:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error                                                                                   no-console
+  30:3  warning  Unexpected console statement. Only these console methods are allowed: warn, error                                                                                   no-console
+  31:3  error    Promises must be awaited, end with a call to .catch, end with a call to .then with a rejection handler or be explicitly marked as ignored with the `void` operator  @typescript-eslint/no-floating-promises
+  33:7  warning  Unexpected console statement. Only these console methods are allowed: warn, error                                                                                   no-console
+
+✖ 19 problems (14 errors, 5 warnings)
+  1 error and 0 warnings potentially fixable with the `--fix` option.
+
+
+$ git diff --check
+Exit code: 0
+(no output)
+
+$ git diff --stat (tracked files; new files listed in report)
+ .github/workflows/ci.yml                           |   4 +
+ backend/src/__tests__/academic-task-atomic.test.ts |  11 +-
+ backend/src/__tests__/mobile-push-session.test.ts  |  13 ++
+ backend/src/__tests__/notification.test.ts         | 174 ++++++---------------
+ backend/src/__tests__/reminder-worker.test.ts      |  36 ++---
+ .../src/modules/academic/academic-task.service.ts  |   2 +-
+ backend/src/modules/events/event.service.ts        |   2 +-
+ .../modules/notifications/notification.service.ts  |  90 +++++------
+ backend/src/modules/reminders/reminder-checker.ts  |  36 +++--
+ backend/src/modules/reviews/review.service.ts      |  39 ++---
+ backend/src/modules/tasks/task.service.ts          |   2 +-
+ tests/integration/helpers/bootstrap.ts             |  38 +----
+ .../scenarios/api-db-integration.test.ts           |  12 +-
+ .../integration/scenarios/migration-clean.test.ts  |   4 +-
+ .../integration/scenarios/migration-update.test.ts |  13 ++
+ 15 files changed, 200 insertions(+), 276 deletions(-)

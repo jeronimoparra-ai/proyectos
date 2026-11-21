@@ -5,6 +5,7 @@ import { Platform } from 'react-native';
 import { notificationService } from '../services/notification';
 import { useAuthStore } from '../store/useAuthStore';
 import { supabase } from '../services/supabase';
+import { useAutomationStore } from '../store/useAutomationStore';
 
 Notifications.setNotificationHandler({
   handleNotification: async (notification) => {
@@ -37,9 +38,17 @@ Notifications.setNotificationHandler({
 export function usePushNotifications() {
   const expoPushToken = useRef<string | null>(null);
   const user = useAuthStore((s) => s.user);
+  const remindersEnabled = useAutomationStore((s) => s.remindersEnabled);
 
   const registerForPushNotifications = useCallback(async () => {
     if (!user || !supabase) return;
+
+    // Solo registrar push si los recordatorios están habilitados
+    if (!remindersEnabled) {
+      console.log('[usePushNotifications] Reminders disabled, skipping push registration');
+      return;
+    }
+
     const registrationUserId = user.id;
 
     try {
@@ -98,7 +107,7 @@ export function usePushNotifications() {
     } catch (err) {
       console.warn('[usePushNotifications] Error during push notification setup:', err);
     }
-  }, [user]);
+  }, [user, remindersEnabled]);
 
   useEffect(() => {
     if (!user) return;

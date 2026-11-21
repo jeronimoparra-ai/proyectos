@@ -1,11 +1,13 @@
+import { memo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTheme } from '../../hooks';
+import { cardStyles } from '../../theme/cardStyles';
 import { Countdown } from './Countdown';
 import { AnimatedPressable } from '../AnimatedPressable';
 import { IconCheck } from '../icons';
 import type { Task } from '../../types';
 
-interface TaskCardProps {
+export interface TaskCardProps {
   task: Task;
   onPress: (task: Task) => void;
   onComplete: (task: Task) => void;
@@ -26,7 +28,25 @@ const statusLabels: Record<string, string> = {
   cancelled: 'Cancelled',
 };
 
-export function TaskCard({ task, onPress, onComplete }: TaskCardProps) {
+function areTaskCardPropsEqual(prev: TaskCardProps, next: TaskCardProps): boolean {
+  if (prev.task === next.task && prev.onPress === next.onPress && prev.onComplete === next.onComplete) {
+    return true;
+  }
+  return (
+    prev.task.id === next.task.id &&
+    prev.task.title === next.task.title &&
+    prev.task.status === next.task.status &&
+    prev.task.priority === next.task.priority &&
+    prev.task.due_date === next.task.due_date &&
+    prev.task.due_time === next.task.due_time &&
+    prev.task.color === next.task.color &&
+    prev.task.description === next.task.description &&
+    prev.onPress === next.onPress &&
+    prev.onComplete === next.onComplete
+  );
+}
+
+export const TaskCard = memo(function TaskCard({ task, onPress, onComplete }: TaskCardProps) {
   const { colors, borderRadius } = useTheme();
 
   const hasDeadline = task.due_date && task.status !== 'completed';
@@ -35,7 +55,8 @@ export function TaskCard({ task, onPress, onComplete }: TaskCardProps) {
   return (
     <AnimatedPressable
       style={[
-        styles.container,
+        cardStyles.cardContainer,
+        cardStyles.cardBorderLeft,
         {
           backgroundColor: colors.surface,
           borderRadius: borderRadius.lg,
@@ -46,8 +67,8 @@ export function TaskCard({ task, onPress, onComplete }: TaskCardProps) {
       accessibilityRole="button"
       accessibilityLabel={`Task: ${task.title}`}
     >
-      <View style={styles.header}>
-        <View style={styles.titleRow}>
+      <View style={cardStyles.headerRow}>
+        <View style={cardStyles.titleRow}>
           <TouchableOpacity
             style={[
               styles.checkbox,
@@ -68,7 +89,7 @@ export function TaskCard({ task, onPress, onComplete }: TaskCardProps) {
           </TouchableOpacity>
           <Text
             style={[
-              styles.title,
+              cardStyles.titleText,
               {
                 color: task.status === 'completed' ? colors.textTertiary : colors.text,
                 textDecorationLine: task.status === 'completed' ? 'line-through' : 'none',
@@ -79,8 +100,8 @@ export function TaskCard({ task, onPress, onComplete }: TaskCardProps) {
             {task.title}
           </Text>
         </View>
-        <View style={[styles.badge, { backgroundColor: priorityColors[task.priority] + '20' }]}>
-          <Text style={[styles.badgeText, { color: priorityColors[task.priority] }]}>
+        <View style={[cardStyles.badgeBase, { backgroundColor: priorityColors[task.priority] + '20' }]}>
+          <Text style={[cardStyles.badgeTextBase, { color: priorityColors[task.priority] }]}>
             {task.priority}
           </Text>
         </View>
@@ -101,38 +122,19 @@ export function TaskCard({ task, onPress, onComplete }: TaskCardProps) {
             {isOverdue && (
               <Text style={[styles.overdueText, { color: colors.error }]}>Overdue</Text>
             )}
-            <Countdown targetDate={task.due_date!} targetTime={task.due_time ?? undefined} />
+            <Countdown
+              targetDate={task.due_date!}
+              targetTime={task.due_time ?? undefined}
+              precision="minute"
+            />
           </View>
         )}
       </View>
     </AnimatedPressable>
   );
-}
+}, areTaskCardPropsEqual);
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    marginHorizontal: 16,
-    marginVertical: 6,
-    borderLeftWidth: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    gap: 12,
-  },
   checkbox: {
     width: 22,
     height: 22,
@@ -140,26 +142,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  checkmark: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: '600',
-    flex: 1,
-  },
-  badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    textTransform: 'capitalize',
   },
   description: {
     fontSize: 14,

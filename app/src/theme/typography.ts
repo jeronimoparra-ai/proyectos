@@ -23,10 +23,17 @@ export const typography = {
     medium: '500' as const,
     semibold: '600' as const,
     bold: '700' as const,
+    extrabold: '800' as const,
   },
   lineHeights: {
     tight: 1.2,
     normal: 1.5,
     relaxed: 1.75,
+  },
+  letterSpacing: {
+    tight: -0.5,
+    normal: 0,
+    wide: 0.5,
+    academic: 0.8,
   },
 } as const;

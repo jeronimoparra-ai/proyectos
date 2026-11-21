@@ -81,24 +81,22 @@ export class NotificationService {
       messageId: null,
     }));
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), timeoutMs);
       const response = await fetch(EXPO_PUSH_URL, {
         method: 'POST',
         headers: this.buildHeaders(),
         body: JSON.stringify(messages),
         signal: controller.signal,
       });
-      clearTimeout(timeout);
 
       if (!response.ok) {
-        const body = await response.text().catch(() => '');
         for (let i = 0; i < tokens.length; i++) {
           results[i].error = `expo_status_${response.status}`;
         }
         console.error(
-          `Expo error ${response.status} para ${tokens.length} tokens: ${body.slice(0, 500)}`
+          `Expo error ${response.status} para ${tokens.length} tokens`
         );
         return results;
       }
@@ -137,6 +135,8 @@ export class NotificationService {
       }
       console.error('Failed to send push notification (timeout/network):', error);
       return results;
+    } finally {
+      clearTimeout(timeout);
     }
   }
 
@@ -218,7 +218,7 @@ export class NotificationService {
     const delivery = {
       status,
       messageIds,
-      tokenResults,
+      tokenResults: tokenResults.map(({ success, error, messageId }) => ({ success, error, messageId })),
       timestamp: new Date().toISOString(),
     };
     const merged = { ...current, delivery };
@@ -241,7 +241,7 @@ export class NotificationService {
    *   3. RESULTADO: registro del recibo sobre el aviso interno.
    *
    * Devuelve el aviso interno y el resultado por token. El worker marca
-   * `sent_at` sólo cuando `delivered === true` (todo el lote).
+   * `sent_at` cuando Expo acepta al menos un token; no confirma entrega al dispositivo.
    */
   async sendReminderNotification(
     userId: string,
@@ -249,7 +249,8 @@ export class NotificationService {
     remindAt: string,
     data?: Record<string, unknown>
   ) {
-    const notification = await this.createNotification(
+    const reminderId = typeof data?.reminderId === 'string' ? data.reminderId : undefined;
+    const notification = reminderId ? await this.getOrCreateReminder(userId, reminderId, taskTitle, data) : await this.createNotification(
       userId,
       'Recordatorio',
       `Recordatorio: ${taskTitle}`,
@@ -257,14 +258,19 @@ export class NotificationService {
       data
     );
 
-    const tokenResults = await this.sendPushNotificationWithTimeout(userId, {
+    const previousDelivery = (notification.data as { delivery?: { status?: string } } | undefined)?.delivery;
+    if (previousDelivery?.status === 'accepted') {
+      return { notification, tokenResults: [], delivered: true, accepted: true };
+    }
+
+    const tokenResults = await this.sendPushNotification(userId, {
       title: 'Recordatorio',
       body: taskTitle,
       data: {
         ...data,
         notificationId: (notification as { id: string }).id,
       },
-    });
+    }, { guaranteedRecipient: false });
 
     const messageIds = tokenResults
       .filter((r) => r.success)
@@ -276,56 +282,42 @@ export class NotificationService {
     if (notificationId) {
       await this.recordDeliveryReceipt(
         notificationId,
-        delivered ? 'delivered' : 'failed',
+        delivered ? 'accepted' : 'failed',
         messageIds,
         tokenResults
       );
     }
 
-    return { notification, tokenResults, delivered };
+    // Legacy delivered boolean means provider acceptance, not device delivery.
+    return { notification, tokenResults, delivered, accepted: delivered };
+  }
+
+  private async getOrCreateReminder(userId: string, reminderId: string, taskTitle: string, data?: Record<string, unknown>) {
+    // Reuse the reminder UUID as notification PK: retries cannot create duplicates.
+    const { error } = await supabase.from('notifications').upsert({
+      id: reminderId, user_id: userId, title: 'Recordatorio',
+      body: `Recordatorio: ${taskTitle}`, type: 'reminder', data,
+    }, { onConflict: 'id', ignoreDuplicates: true });
+    if (error) throw createAppError(error.message, 500, 'DB_ERROR');
+    const result = await supabase.from('notifications').select('*').eq('id', reminderId).eq('user_id', userId).single();
+    if (result.error || !result.data) throw createAppError('Reminder notification unavailable', 500, 'DB_ERROR');
+    return result.data as { id: string; [key: string]: unknown };
   }
 
   // --- API existente (no modificada por T5) --------------------------
 
   async registerPushToken(userId: string, input: RegisterPushTokenInput) {
-    // Comprobación previa: si el token pertenece a otra cuenta, rechazar
-    // la reactivación si el timestamp del cliente es anterior al registro actual (respuesta tardía).
-    const { data: existing } = await supabase
-      .from('push_tokens')
-      .select('user_id, active, updated_at')
-      .eq('token', input.token)
-      .maybeSingle();
-
-    if (existing && existing.user_id !== userId) {
-      if (input.clientTimestamp) {
-        const clientTime = new Date(input.clientTimestamp).getTime();
-        const existingTime = new Date(existing.updated_at as string).getTime();
-        if (!isNaN(clientTime) && !isNaN(existingTime) && clientTime < existingTime) {
-          return existing;
-        }
-      }
-    }
-
-    // UNIQUE(token) global: onConflict debe apuntar a 'token' (no a 'user_id,token').
-    const response = await supabase
-      .from('push_tokens')
-      .upsert(
-        {
-          user_id: userId,
-          token: input.token,
-          platform: input.platform,
-          active: true,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'token' }
-      )
-      .select()
-      .single();
-
-    const { data, error } = response as { data: { user_id: string; token: string; platform: string; active: boolean; updated_at: string } | null; error: Error | null };
-
+    const timestamp = input.clientTimestamp === undefined ? null : new Date(input.clientTimestamp);
+    if (timestamp && !Number.isFinite(timestamp.getTime())) throw createAppError('Invalid client timestamp', 400, 'INVALID_INPUT');
+    const { data, error } = await supabase.rpc('register_push_token_atomic', {
+      p_user_id: userId,
+      p_token: input.token,
+      p_platform: input.platform,
+      p_client_timestamp: timestamp?.toISOString() ?? null,
+    }) as { data: Array<{ user_id: string; token: string; platform: string; active: boolean; updated_at: string }> | null; error: { message: string } | null };
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
-    return data as { user_id: string; token: string; platform: string; active: boolean; updated_at: string };
+    // Stale registration is an idempotent no-op, never another owner's record.
+    return data?.[0] ?? { user_id: userId, token: input.token, platform: input.platform, active: false };
   }
 
   // --- Desvinculación idempotente al cerrar sesión (T2) ----------------

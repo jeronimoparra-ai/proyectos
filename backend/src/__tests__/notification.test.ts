@@ -9,6 +9,7 @@ vi.mock('../database/supabase', () => {
   return {
     supabase: {
       from: vi.fn(),
+      rpc: vi.fn(),
     },
   };
 });
@@ -22,135 +23,24 @@ describe('NotificationService - T2 Mobile Push & Session Remediation', () => {
   });
 
   describe('Atomic token registration and account reassignment', () => {
-    it('uses onConflict: "token" for atomic upsert avoiding unique constraint violation', async () => {
-      const mockSingle = vi.fn().mockResolvedValue({
-        data: {
-          id: 'token-uuid-1',
-          user_id: 'user-b',
-          token: 'expo-token-device-1',
-          platform: 'android',
-          active: true,
-          updated_at: new Date().toISOString(),
-        },
-        error: null,
+    it('uses the atomic authenticated registration RPC', async () => {
+      vi.mocked(supabase.rpc).mockResolvedValue({ data: [{ user_id: 'user-b', active: true }], error: null } as never);
+      const result = await service.registerPushToken('user-b', { token: 'token', platform: 'android' });
+      expect(supabase.rpc).toHaveBeenCalledWith('register_push_token_atomic', {
+        p_user_id: 'user-b', p_token: 'token', p_platform: 'android', p_client_timestamp: null,
       });
-
-      const mockSelect = vi.fn().mockReturnValue({ single: mockSingle });
-      const mockUpsert = vi.fn().mockReturnValue({ select: mockSelect });
-
-      const mockMaybeSingle = vi.fn().mockResolvedValue({
-        data: {
-          user_id: 'user-a',
-          active: true,
-          updated_at: '2026-11-13T20:00:00.000Z',
-        },
-        error: null,
-      });
-
-      const mockEq = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle });
-      const mockSelectExisting = vi.fn().mockReturnValue({ eq: mockEq });
-
-      vi.mocked(supabase.from).mockImplementation((table: string) => {
-        if (table === 'push_tokens') {
-          return {
-            select: vi.fn((fields) => {
-              if (fields === 'user_id, active, updated_at') {
-                return mockSelectExisting();
-              }
-              return mockSelect(fields);
-            }),
-            upsert: mockUpsert,
-          } as any;
-        }
-        return {} as any;
-      });
-
-      const result = await service.registerPushToken('user-b', {
-        token: 'expo-token-device-1',
-        platform: 'android',
-        clientTimestamp: '2026-11-13T21:00:00.000Z',
-      });
-
-      expect(mockUpsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          user_id: 'user-b',
-          token: 'expo-token-device-1',
-          platform: 'android',
-          active: true,
-        }),
-        { onConflict: 'token' }
-      );
       expect(result.user_id).toBe('user-b');
     });
 
-    it('rejects stale registration from previous session if clientTimestamp is older than reallocated token', async () => {
-      const existingTokenRecord = {
-        user_id: 'user-b',
-        active: true,
-        updated_at: '2026-11-13T20:30:00.000Z',
-      };
-
-      const mockMaybeSingle = vi.fn().mockResolvedValue({
-        data: existingTokenRecord,
-        error: null,
-      });
-      const mockEq = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle });
-      const mockSelectExisting = vi.fn().mockReturnValue({ eq: mockEq });
-      const mockUpsert = vi.fn();
-
-      vi.mocked(supabase.from).mockImplementation((table: string) => {
-        if (table === 'push_tokens') {
-          return {
-            select: vi.fn(() => mockSelectExisting()),
-            upsert: mockUpsert,
-          } as any;
-        }
-        return {} as any;
-      });
-
-      // User A's slow request from 20:00 arrives after User B already took token at 20:30
-      const result = await service.registerPushToken('user-a', {
-        token: 'expo-token-device-1',
-        platform: 'android',
-        clientTimestamp: '2026-11-13T20:00:00.000Z',
-      });
-
-      expect(mockUpsert).not.toHaveBeenCalled();
-      expect(result.user_id).toBe('user-b'); // Not reallocated back to user A
+    it('does not disclose another owner on stale registration', async () => {
+      vi.mocked(supabase.rpc).mockResolvedValue({ data: [], error: null } as never);
+      const result = await service.registerPushToken('user-a', { token: 'token', platform: 'android', clientTimestamp: '2026-01-01T00:00:00Z' });
+      expect(result).toEqual({ user_id: 'user-a', token: 'token', platform: 'android', active: false });
     });
 
-    it('handles concurrent registrations without throwing unique constraint error', async () => {
-      const mockSingle = vi.fn().mockImplementation(() =>
-        Promise.resolve({
-          data: { id: 'uuid-1', user_id: 'user-b', token: 'tok-concurrent', active: true },
-          error: null,
-        })
-      );
-      const mockSelect = vi.fn().mockReturnValue({ single: mockSingle });
-      const mockUpsert = vi.fn().mockReturnValue({ select: mockSelect });
-      const mockMaybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
-
-      vi.mocked(supabase.from).mockImplementation(() => {
-        return {
-          select: vi.fn((fields) => {
-            if (fields === 'user_id, active, updated_at') {
-              return { eq: vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle }) };
-            }
-            return mockSelect();
-          }),
-          upsert: mockUpsert,
-        } as any;
-      });
-
-      const p1 = service.registerPushToken('user-b', { token: 'tok-concurrent', platform: 'android' });
-      const p2 = service.registerPushToken('user-b', { token: 'tok-concurrent', platform: 'android' });
-
-      const [r1, r2] = await Promise.all([p1, p2]);
-      expect(r1).toBeDefined();
-      expect(r2).toBeDefined();
-      expect(mockUpsert).toHaveBeenCalledTimes(2);
-      expect(mockUpsert).toHaveBeenNthCalledWith(1, expect.any(Object), { onConflict: 'token' });
-      expect(mockUpsert).toHaveBeenNthCalledWith(2, expect.any(Object), { onConflict: 'token' });
+    it('propagates storage failures', async () => {
+      vi.mocked(supabase.rpc).mockResolvedValue({ data: null, error: { message: 'failure' } } as never);
+      await expect(service.registerPushToken('user-b', { token: 'token', platform: 'android' })).rejects.toThrow('failure');
     });
   });
 
@@ -416,5 +306,43 @@ describe('NotificationController - removePushToken', () => {
 
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({ message: 'Token is required' });
+  });
+});
+
+describe('P4 provider acceptance and reminder privacy', () => {
+  beforeEach(() => vi.restoreAllMocks());
+  it('records accepted rather than delivered and attaches recipient to generic push', async () => {
+    const service = new NotificationService();
+    vi.spyOn(service, 'createNotification').mockResolvedValue({ id: 'notice' });
+    const send = vi.spyOn(service, 'sendPushNotification').mockResolvedValue([{ token: 'synthetic', success: true, error: null, messageId: 'ticket' }]);
+    const receipt = vi.spyOn(service, 'recordDeliveryReceipt').mockResolvedValue();
+    const result = await service.sendReminderNotification('owner', 'Private task', '2026-01-01');
+    expect(result.accepted).toBe(true);
+    expect(receipt).toHaveBeenCalledWith('notice', 'accepted', ['ticket'], expect.any(Array));
+    expect(send).toHaveBeenCalledWith('owner', expect.any(Object), { guaranteedRecipient: false });
+  });
+
+  it('uses the existing notification primary key for retry deduplication and skips accepted sends', async () => {
+    const service = new NotificationService();
+    const upsert = vi.fn().mockResolvedValue({ error: null });
+    const row = { id: 'reminder', data: { delivery: { status: 'accepted' } } };
+    const builder = { eq: vi.fn().mockReturnThis(), single: vi.fn().mockResolvedValue({ data: row, error: null }) };
+    vi.mocked(supabase.from).mockReturnValue({ upsert, select: vi.fn(() => builder) } as never);
+    const send = vi.spyOn(service, 'sendPushNotification');
+    const result = await service.sendReminderNotification('owner', 'Task', '2026-01-01', { reminderId: 'reminder' });
+    expect(upsert).toHaveBeenCalledWith(expect.objectContaining({ id: 'reminder', user_id: 'owner' }), { onConflict: 'id', ignoreDuplicates: true });
+    expect(result.accepted).toBe(true);
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('does not persist push tokens in user-readable notification data', async () => {
+    const service = new NotificationService();
+    const update = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) }));
+    vi.mocked(supabase.from).mockReturnValue({
+      select: vi.fn(() => ({ eq: vi.fn(() => ({ single: vi.fn().mockResolvedValue({ data: { data: { reminderId: 'r' } }, error: null }) })) })), update,
+    } as never);
+    await service.recordDeliveryReceipt('n', 'accepted', ['ticket'], [{ token: 'sensitive-device-token', success: true, error: null, messageId: 'ticket' }]);
+    expect(JSON.stringify(update.mock.calls)).not.toContain('sensitive-device-token');
+    expect(update).toHaveBeenCalledWith({ data: expect.objectContaining({ reminderId: 'r', delivery: expect.objectContaining({ status: 'accepted' }) }) });
   });
 });

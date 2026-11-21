@@ -6,6 +6,7 @@ vi.mock('../database/supabase', () => {
   return {
     supabase: {
       from: vi.fn(),
+      rpc: vi.fn(),
     },
   };
 });
@@ -29,6 +30,18 @@ describe('Mobile Push & Multi-Device Session Acceptance Criteria', () => {
     vi.clearAllMocks();
     service = new NotificationService();
     dbPushTokens = [];
+
+    vi.mocked(supabase.rpc).mockImplementation((_name, args) => {
+      const input = args as { p_user_id: string; p_token: string; p_platform: string; p_client_timestamp: string | null };
+      const existing = dbPushTokens.find((row) => row.token === input.p_token);
+      if (existing && input.p_client_timestamp && input.p_client_timestamp < existing.updated_at) {
+        return Promise.resolve({ data: [], error: null }) as never;
+      }
+      const row: DbTokenRow = { id: existing?.id ?? 'synthetic-id', user_id: input.p_user_id, token: input.p_token,
+        platform: input.p_platform, active: true, updated_at: new Date().toISOString() };
+      if (existing) Object.assign(existing, row); else dbPushTokens.push(row);
+      return Promise.resolve({ data: [row], error: null }) as never;
+    });
 
     // Realistic mock of Supabase chaining for push_tokens table
     vi.mocked(supabase.from).mockImplementation((table: string) => {

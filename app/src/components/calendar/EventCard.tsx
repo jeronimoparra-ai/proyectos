@@ -1,10 +1,12 @@
+import { memo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../../hooks';
+import { cardStyles } from '../../theme/cardStyles';
 import { AnimatedPressable } from '../AnimatedPressable';
 import { IconLocation } from '../icons';
 import type { Event } from '../../types';
 
-interface EventCardProps {
+export interface EventCardProps {
   event: Event;
   onPress: (event: Event) => void;
 }
@@ -14,7 +16,24 @@ const sourceColors: Record<string, string> = {
   google: '#EA4335',
 };
 
-export function EventCard({ event, onPress }: EventCardProps) {
+function areEventCardPropsEqual(prev: EventCardProps, next: EventCardProps): boolean {
+  if (prev.event === next.event && prev.onPress === next.onPress) {
+    return true;
+  }
+  return (
+    prev.event.id === next.event.id &&
+    prev.event.title === next.event.title &&
+    prev.event.start_date === next.event.start_date &&
+    prev.event.end_date === next.event.end_date &&
+    prev.event.all_day === next.event.all_day &&
+    prev.event.color === next.event.color &&
+    prev.event.source === next.event.source &&
+    prev.event.location === next.event.location &&
+    prev.onPress === next.onPress
+  );
+}
+
+export const EventCard = memo(function EventCard({ event, onPress }: EventCardProps) {
   const { colors, borderRadius } = useTheme();
 
   const startTime = new Date(event.start_date);
@@ -29,6 +48,8 @@ export function EventCard({ event, onPress }: EventCardProps) {
   return (
     <AnimatedPressable
       style={[
+        cardStyles.cardContainer,
+        cardStyles.cardBorderLeftThin,
         styles.container,
         {
           backgroundColor: colors.surface,
@@ -72,16 +93,14 @@ export function EventCard({ event, onPress }: EventCardProps) {
       )}
     </AnimatedPressable>
   );
-}
+}, areEventCardPropsEqual);
 
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    marginHorizontal: 16,
     marginVertical: 4,
-    borderLeftWidth: 3,
     gap: 12,
   },
   timeColumn: {

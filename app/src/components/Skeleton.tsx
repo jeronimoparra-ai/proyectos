@@ -1,15 +1,126 @@
-import { useRef, useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import {
   View,
   Animated,
   StyleSheet,
-  AccessibilityInfo,
+  AppState,
+  type AppStateStatus,
   type DimensionValue,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import { useTheme } from '../hooks';
+import { useTheme, useReducedMotion } from '../hooks';
 import { animation } from '../theme/animation';
+import { cardStyles } from '../theme/cardStyles';
+
+// Controlador compartido de Shimmer para evitar decenas de loops concurrentes
+class SharedShimmerController {
+  private loopAnim: Animated.CompositeAnimation | null = null;
+  private subscriberCount = 0;
+  private appStateSubscription: { remove: () => void } | null = null;
+  private isAppActive = true;
+  private opacityValue: Animated.Value | null = null;
+
+  // Lazy init de Animated.Value
+  get opacity(): Animated.Value {
+    if (!this.opacityValue) {
+      this.opacityValue = new Animated.Value(0.35);
+    }
+    return this.opacityValue;
+  }
+
+  private start() {
+    if (this.loopAnim !== null || !this.isAppActive || this.subscriberCount === 0) {
+      return;
+    }
+
+    this.loopAnim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(this.opacity, {
+          toValue: 0.85,
+          duration: animation.duration.shimmer,
+          useNativeDriver: true,
+        }),
+        Animated.timing(this.opacity, {
+          toValue: 0.35,
+          duration: animation.duration.shimmer,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    this.loopAnim.start();
+  }
+
+  private stop() {
+    if (this.loopAnim) {
+      this.loopAnim.stop();
+      this.loopAnim = null;
+    }
+    if (this.opacityValue) {
+      this.opacityValue.stopAnimation();
+    }
+  }
+
+  handleAppStateChange = (nextState: AppStateStatus) => {
+    const isNowActive = nextState === 'active';
+    if (isNowActive && !this.isAppActive) {
+      this.isAppActive = true;
+      if (this.subscriberCount > 0) {
+        this.start();
+      }
+    } else if (!isNowActive && this.isAppActive) {
+      this.isAppActive = false;
+      this.stop();
+    }
+  };
+
+  subscribe(reduceMotion: boolean): () => void {
+    if (reduceMotion) {
+      return () => {};
+    }
+
+    this.subscriberCount++;
+    if (this.subscriberCount === 1) {
+      this.isAppActive = AppState.currentState === 'active';
+      this.appStateSubscription = AppState.addEventListener('change', this.handleAppStateChange);
+      if (this.isAppActive) {
+        this.start();
+      }
+    }
+
+    return () => {
+      this.subscriberCount--;
+      if (this.subscriberCount <= 0) {
+        this.subscriberCount = 0;
+        this.stop();
+        if (this.appStateSubscription) {
+          this.appStateSubscription.remove();
+          this.appStateSubscription = null;
+        }
+      }
+    };
+  }
+
+  getSubscriberCount(): number {
+    return this.subscriberCount;
+  }
+
+  isRunning(): boolean {
+    return this.loopAnim !== null;
+  }
+
+  reset() {
+    this.stop();
+    if (this.appStateSubscription) {
+      this.appStateSubscription.remove();
+      this.appStateSubscription = null;
+    }
+    this.subscriberCount = 0;
+    this.isAppActive = true;
+  }
+}
+
+export const sharedShimmer = new SharedShimmerController();
 
 export interface SkeletonBoxProps {
   width?: DimensionValue;
@@ -25,51 +136,11 @@ export function SkeletonBox({
   style,
 }: SkeletonBoxProps) {
   const { colors, borderRadius } = useTheme();
-  const opacity = useRef(new Animated.Value(0.35)).current;
-  const [reduceMotion, setReduceMotion] = useState(false);
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
-    let isMounted = true;
-    let loopAnim: Animated.CompositeAnimation | null = null;
-
-    AccessibilityInfo.isReduceMotionEnabled()
-      .then((reduced) => {
-        if (!isMounted) return;
-        if (reduced) {
-          setReduceMotion(true);
-          opacity.setValue(0.6);
-          return;
-        }
-
-        loopAnim = Animated.loop(
-          Animated.sequence([
-            Animated.timing(opacity, {
-              toValue: 0.85,
-              duration: animation.duration.shimmer,
-              useNativeDriver: true,
-            }),
-            Animated.timing(opacity, {
-              toValue: 0.35,
-              duration: animation.duration.shimmer,
-              useNativeDriver: true,
-            }),
-          ])
-        );
-        loopAnim.start();
-      })
-      .catch(() => {
-        if (!isMounted) return;
-        opacity.setValue(0.6);
-      });
-
-    return () => {
-      isMounted = false;
-      if (loopAnim) {
-        loopAnim.stop();
-      }
-      opacity.stopAnimation();
-    };
-  }, [opacity]);
+    return sharedShimmer.subscribe(reduceMotion);
+  }, [reduceMotion]);
 
   return (
     <Animated.View
@@ -79,7 +150,7 @@ export function SkeletonBox({
           height,
           borderRadius: customRadius ?? borderRadius.sm,
           backgroundColor: colors.surfaceVariant,
-          opacity: reduceMotion ? 0.6 : opacity,
+          opacity: reduceMotion ? 0.6 : sharedShimmer.opacity,
         },
         style,
       ]}
@@ -97,7 +168,9 @@ export function SkeletonCard({ style }: SkeletonCardProps) {
   return (
     <View
       style={[
-        styles.card,
+        cardStyles.cardContainer,
+        cardStyles.cardBorderLeft,
+        styles.cardPadding,
         {
           backgroundColor: colors.surface,
           borderRadius: borderRadius.lg,
@@ -106,8 +179,8 @@ export function SkeletonCard({ style }: SkeletonCardProps) {
         style,
       ]}
     >
-      <View style={styles.cardHeader}>
-        <View style={styles.cardTitleRow}>
+      <View style={cardStyles.headerRow}>
+        <View style={cardStyles.titleRow}>
           <SkeletonBox width={22} height={22} borderRadius={borderRadius.full} />
           <SkeletonBox width="60%" height={16} />
         </View>
@@ -141,22 +214,7 @@ export function ScreenSkeleton({ count = 3, style }: ScreenSkeletonProps) {
 }
 
 const styles = StyleSheet.create({
-  card: {
-    padding: 16,
-    marginHorizontal: 16,
-    marginVertical: 6,
-    borderLeftWidth: 4,
-    gap: 12,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  cardTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
+  cardPadding: {
     gap: 12,
   },
   cardBody: {

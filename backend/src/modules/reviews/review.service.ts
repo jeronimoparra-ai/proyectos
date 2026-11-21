@@ -93,33 +93,16 @@ export class ReviewService {
   }
 
   async getReviewStats(userId: string) {
-    const { data: tasks, error: tasksError } = await supabase
-      .from('academic_tasks')
-      .select('id, next_review_at, review_count, total_reviews')
-      .eq('user_id', userId)
-      .is('deleted_at', null);
-
-    if (tasksError) throw createAppError(tasksError.message, 500, 'DB_ERROR');
-
-    const now = new Date();
-    const dueToday = (tasks ?? []).filter((t) => {
-      if (!t.next_review_at) return false;
-      return new Date(t.next_review_at) <= now;
-    }).length;
-
-    // Use total_reviews for historical count, review_count for SM-2 streak
-    const totalReviews = (tasks ?? []).reduce((sum, t) => sum + ((t as { total_reviews?: number }).total_reviews ?? 0), 0);
-
-    const { count: totalTasks } = await supabase
-      .from('academic_tasks')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .is('deleted_at', null);
-
+    const { data, error } = await supabase.rpc('get_review_stats', { p_user_id: userId }) as {
+      data: Array<{ total_tasks: number | string; due_today: number | string; total_reviews: number | string }> | null;
+      error: { message: string } | null;
+    };
+    if (error) throw createAppError(error.message, 500, 'DB_ERROR');
+    const stats = data?.[0];
     return {
-      totalTasks: totalTasks ?? 0,
-      dueToday,
-      totalReviews,
+      totalTasks: Number(stats?.total_tasks ?? 0),
+      dueToday: Number(stats?.due_today ?? 0),
+      totalReviews: Number(stats?.total_reviews ?? 0),
     };
   }
 
@@ -132,7 +115,9 @@ export class ReviewService {
         total_reviews: 0,
       })
       .eq('id', academicTaskId)
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .is('next_review_at', null)
+      .eq('total_reviews', 0);
 
     if (error) throw createAppError(error.message, 500, 'DB_ERROR');
 

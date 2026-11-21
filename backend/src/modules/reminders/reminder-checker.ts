@@ -85,9 +85,8 @@ export function startReminderWorker(): void {
     } catch (err) {
       console.error('Error en el lote de recordatorios:', err);
     } finally {
-      batchCount = Math.max(0, batchCount - 1);
       if (!isStopping) {
-        setTimeout(tick, CHECK_INTERVAL_MS);
+        intervalId = setTimeout(tick, CHECK_INTERVAL_MS);
       }
     }
   };
@@ -158,7 +157,18 @@ async function processReminder(reminder: ClaimedReminder): Promise<void> {
     priority: reminder.task_priority,
   };
 
+  // True cuando el proveedor ya acepto el aviso: un fallo posterior al
+  // persistir NO debe incrementar retry_count (provocaria envios duplicados).
+  let providerAccepted = false;
   try {
+    // Refresh this lease immediately before I/O; a slow prior batch item may
+    // have allowed another worker to reclaim it. Never send after losing it.
+    const lease = await getCheckerClient().rpc('renew_reminder_claim', {
+      p_id: reminder.id, p_locked_by: WORKER_ID,
+    });
+    if (lease.error) throw lease.error;
+    if (!lease.data) return;
+
     // 1) CREACIÓN del aviso interno: se inscribe la nota en la base de
     //    datos antes de llamar a Expo. El trabajo interno va acotado al
     //    destinatario (runWithSystemUser); nunca a un service_role abierto.
@@ -171,37 +181,53 @@ async function processReminder(reminder: ClaimedReminder): Promise<void> {
       )
     );
 
-    // 2) Si la entrega se registró sobre el aviso, marcar el recordatorio
+    // 2) Si Expo aceptó el aviso, marcar el recordatorio
     //    como sent (no volverá a ser reclamado).
     if (result.delivered && result.notification?.id) {
+      providerAccepted = true;
       await markReminderSent(reminder.id);
-    } else if (result.notification?.id) {
-      // El aviso interno existe pero la entrega no se registró: el backoff
-      // de abajo lo reintenta; no marcar sent_at para conservar el retento.
-      console.warn(
-        `Recordatorio ${reminder.id} creado pero entrega sin registrar (delivered=${result.delivered}).`
-      );
+    } else {
+      await scheduleRetry(reminder.id, 'Provider did not accept the push');
     }
   } catch (err) {
-    // 3) REINTENTO con backoff exponencial. El recordatorio reingresa a
-    //    la lista de disponibles cuando caduque la reclamación
-    //    (retry_at <= now) tras claim_due_reminders.
-    await scheduleRetry(reminder.id, err);
+    if (providerAccepted) {
+      // El aviso ya se envio: solo liberar la reserva para que no quede
+      // colgado, SIN incrementar reintentos ni volver a enviarlo.
+      console.error(
+        `Recordatorio ${reminder.id} enviado pero no se pudo marcar como sent:`,
+        err
+      );
+      await releaseClaim(reminder.id);
+    } else {
+      // 3) REINTENTO con backoff exponencial. El recordatorio reingresa a
+      //    la lista de disponibles cuando caduque la reclamación
+      //    (retry_at <= now) tras claim_due_reminders.
+      await scheduleRetry(reminder.id, err);
+    }
   }
 }
 
-async function markReminderSent(reminderId: string): Promise<void> {
-  await getCheckerClient()
+async function releaseClaim(reminderId: string): Promise<void> {
+  const { error } = await getCheckerClient()
     .from('reminders')
-    .update({ is_sent: true, sent_at: new Date().toISOString() })
-    .eq('id', reminderId);
+    .update({ claimed_at: null, locked_by: null })
+    .eq('id', reminderId).eq('locked_by', WORKER_ID);
+  if (error) console.error(`No se pudo liberar el claim de ${reminderId}:`, error);
+}
+
+async function markReminderSent(reminderId: string): Promise<void> {
+  const { error } = await getCheckerClient()
+    .from('reminders')
+    .update({ is_sent: true, sent_at: new Date().toISOString(), claimed_at: null, locked_by: null })
+    .eq('id', reminderId).eq('locked_by', WORKER_ID);
+  if (error) throw error;
 }
 
 async function scheduleRetry(reminderId: string, error: unknown): Promise<void> {
   const { data, error: qErr } = await getCheckerClient()
     .from('reminders')
     .select('retry_count')
-    .eq('id', reminderId)
+    .eq('id', reminderId).eq('locked_by', WORKER_ID)
     .single();
   if (qErr) {
     console.error(`No se pudo consultar retry_count del recordatorio ${reminderId}:`, qErr);
@@ -210,7 +236,7 @@ async function scheduleRetry(reminderId: string, error: unknown): Promise<void> 
   const retryCount = (data as { retry_count: number } | null)?.retry_count ?? 0;
   if (retryCount >= MAX_RETRY_ATTEMPTS) {
     console.error(
-      `Recordatorio ${reminderId} agotó ${MAX_RETRY_ATTEMPTS} reintentos. Abandonando hasta reinicio.`
+      `Recordatorio ${reminderId} agotó ${MAX_RETRY_ATTEMPTS} reintentos. Requiere revisión explícita.`
     );
     return;
   }
@@ -223,8 +249,10 @@ async function scheduleRetry(reminderId: string, error: unknown): Promise<void> 
     .update({
       retry_at: new Date(Date.now() + delay).toISOString(),
       retry_count: retryCount + 1,
+      claimed_at: null,
+      locked_by: null,
     })
-    .eq('id', reminderId);
+    .eq('id', reminderId).eq('locked_by', WORKER_ID);
   console.error(
     `Recordatorio ${reminderId} fallido (intento ${retryCount + 1}/${MAX_RETRY_ATTEMPTS}). Reintento en ${delay} ms: ${String(error)}`
   );

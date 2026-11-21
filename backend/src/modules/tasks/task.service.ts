@@ -29,7 +29,7 @@ export class TaskService {
     const offset = (query.page - 1) * query.limit;
     qb = qb.range(offset, offset + query.limit - 1);
     qb = qb.order('due_date', { ascending: true, nullsFirst: false });
-    qb = qb.order('created_at', { ascending: false });
+    qb = qb.order('created_at', { ascending: false }).order('id', { ascending: true });
 
     const { data, error, count } = await qb;
 

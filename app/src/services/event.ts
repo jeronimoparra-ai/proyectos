@@ -26,7 +26,7 @@ class EventService {
     return session?.access_token ?? '';
   }
 
-  async list(filters: EventFilters = {}): Promise<EventListResponse> {
+  async list(filters: EventFilters = {}, signal?: AbortSignal): Promise<EventListResponse> {
     const token = await this.getToken();
     const params = new URLSearchParams();
 
@@ -39,7 +39,7 @@ class EventService {
     const queryString = params.toString();
     const endpoint = `/events${queryString ? `?${queryString}` : ''}`;
 
-    return apiClient.get<EventListResponse>(endpoint, token);
+    return apiClient.get<EventListResponse>(endpoint, token, signal);
   }
 
   async getById(id: string): Promise<Event> {

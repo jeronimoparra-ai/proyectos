@@ -18,6 +18,7 @@ describe('Migration Update', () => {
   let userId = '';
   let taskId = '';
   let taskTitle = '';
+  let academicId = '';
 
   beforeAll(async () => {
     const client = await pool.connect();
@@ -37,6 +38,10 @@ describe('Migration Update', () => {
       );
       taskId = task.rows[0].id;
 
+      academicId = (await client.query(`INSERT INTO academic_tasks(user_id,title) VALUES($1,'Historical') RETURNING id`, [userId])).rows[0].id;
+      await client.query(`INSERT INTO reviews(user_id,academic_task_id,quality,repetitions)
+        VALUES($1,$2,5,1),($1,$2,1,0)`, [userId, academicId]);
+
       await applyMigrations(client, [
         '002_push_tokens.sql',
         '003_study_sessions.sql',
@@ -47,6 +52,7 @@ describe('Migration Update', () => {
         '008_fix_handle_new_user.sql',
         '009_grant_table_privileges.sql',
         '010_fix_task_soft_delete_rls.sql',
+        '013_backend_atomicity.sql',
       ]);
     } finally {
       client.release();
@@ -64,6 +70,13 @@ describe('Migration Update', () => {
     );
     expect(rows).toHaveLength(1);
     expect(rows[0].title).toBe(taskTitle);
+  });
+
+  it('013 restores historical counts from preexisting reviews without changing the streak', async () => {
+    const state = await pool.query('SELECT total_reviews,review_count FROM academic_tasks WHERE id=$1', [academicId]);
+    expect(state.rows).toEqual([{ total_reviews: 2, review_count: 0 }]);
+    const index = await pool.query("SELECT indexdef FROM pg_indexes WHERE indexname='idx_reminders_pending_due'");
+    expect(index.rows[0].indexdef).toContain('remind_at, id');
   });
 
   it('crea tablas nuevas sin borrar datos previos', async () => {

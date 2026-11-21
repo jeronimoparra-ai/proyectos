@@ -22,6 +22,7 @@ export const MIGRATION_FILES = [
   '008_fix_handle_new_user.sql',
   '009_grant_table_privileges.sql',
   '010_fix_task_soft_delete_rls.sql',
+  '013_backend_atomicity.sql',
 ] as const;
 
 export async function resetPublicSchema(client: PoolClient | Pool): Promise<void> {
@@ -107,40 +108,9 @@ export async function applyMigrations(
     }
   }
 
-  // Tras aplicar migraciones, vuelve a otorgar permisos análogos a Supabase
-  // (PUBLIC schema visible para authenticated, RLS decide filas), y luego
-  // re-aplica los REVOKE deliberados: tablas restringidas 005.
-  await client.query(`
-    GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated, service_role;
-    GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated, service_role;
-    GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO authenticated, service_role;
-  `);
-  // Re-aplica los REVOKE deliberados de 005/007 (capacidades solo service_role).
-  // Tolerante a estado intermedio: algunas migraciones aún no crearon estas
-  // tablas/funciones (p.ej. applyMigrations(['001']) solo aplica 001).
-  await client.query(`
-    DO $$
-    BEGIN
-      IF to_regclass('public.calendar_integrations') IS NOT NULL THEN
-        EXECUTE 'REVOKE ALL ON public.calendar_integrations FROM PUBLIC, anon, authenticated';
-      END IF;
-      IF to_regclass('public.calendar_oauth_states') IS NOT NULL THEN
-        EXECUTE 'REVOKE ALL ON public.calendar_oauth_states FROM PUBLIC, anon, authenticated';
-      END IF;
-      IF to_regprocedure('public.import_calendar_events(uuid, uuid, jsonb)') IS NOT NULL THEN
-        EXECUTE 'REVOKE EXECUTE ON FUNCTION public.import_calendar_events(uuid, uuid, jsonb) FROM PUBLIC, anon, authenticated';
-      END IF;
-      IF to_regprocedure('public.complete_calendar_connection(uuid, text, text, jsonb)') IS NOT NULL THEN
-        EXECUTE 'REVOKE EXECUTE ON FUNCTION public.complete_calendar_connection(uuid, text, text, jsonb) FROM PUBLIC, anon, authenticated';
-      END IF;
-      IF to_regprocedure('public.disconnect_calendar(uuid)') IS NOT NULL THEN
-        EXECUTE 'REVOKE EXECUTE ON FUNCTION public.disconnect_calendar(uuid) FROM PUBLIC, anon, authenticated';
-      END IF;
-      IF to_regprocedure('public.claim_due_reminders(text, integer, integer)') IS NOT NULL THEN
-        EXECUTE 'REVOKE EXECUTE ON FUNCTION public.claim_due_reminders(text, integer, integer) FROM PUBLIC, anon, authenticated';
-      END IF;
-    END $$;
-  `);
+  // Do not grant privileges after migrations: doing so masks ACL regressions
+  // and accidentally restores access explicitly revoked by production SQL.
+
 }
 
 export async function prepareCleanDatabase(client: PoolClient | Pool): Promise<void> {

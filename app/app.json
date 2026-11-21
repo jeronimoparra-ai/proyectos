@@ -20,7 +20,26 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.jerodev.productivityapp",
-      "versionCode": 1
+      "versionCode": 1,
+      "permissions": [
+        "READ_CALENDAR",
+        "WRITE_CALENDAR",
+        "POST_NOTIFICATIONS"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "productivityapp"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"

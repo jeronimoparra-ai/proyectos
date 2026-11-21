@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useColorScheme } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, typography, spacing, borderRadius } from '../theme';
@@ -6,7 +7,7 @@ import type { ColorScheme } from '../theme';
 
 export function useTheme() {
   const deviceScheme = useColorScheme();
-  const { colorScheme } = useAppStore();
+  const colorScheme = useAppStore((state) => state.colorScheme);
   const insets = useSafeAreaInsets();
 
   const resolvedScheme: ColorScheme =
@@ -16,7 +17,7 @@ export function useTheme() {
         : 'light'
       : colorScheme;
 
-  return {
+  return useMemo(() => ({
     colorScheme: resolvedScheme,
     colors: colors[resolvedScheme],
     typography,
@@ -24,5 +25,5 @@ export function useTheme() {
     borderRadius,
     isDark: resolvedScheme === 'dark',
     insets,
-  };
+  }), [resolvedScheme, insets]);
 }

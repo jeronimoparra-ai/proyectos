@@ -356,3 +356,12 @@ describe('ReviewService - Atomic Review Recording with SM-2', () => {
     });
   });
 });
+describe('P4 aggregate review stats', () => {
+  it('returns the public shape from a single aggregate RPC without downloading tasks', async () => {
+    vi.clearAllMocks();
+    mockRpc.mockResolvedValue({ data: [{ total_tasks: '2000', due_today: '1500', total_reviews: '4000' }], error: null });
+    expect(await new ReviewService().getReviewStats('owner')).toEqual({ totalTasks: 2000, dueToday: 1500, totalReviews: 4000 });
+    expect(mockRpc).toHaveBeenCalledWith('get_review_stats', { p_user_id: 'owner' });
+    expect(mockFrom).not.toHaveBeenCalled();
+  });
+});

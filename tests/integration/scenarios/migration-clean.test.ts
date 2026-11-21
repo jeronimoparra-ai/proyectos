@@ -23,8 +23,8 @@ describe('Migration Clean', () => {
     await closeTestPool();
   });
 
-  it('aplica las 10 migraciones sin error en BD vacía', () => {
-    expect(MIGRATION_FILES).toHaveLength(10);
+  it('aplica las 11 migraciones sin error en BD vacía', () => {
+    expect(MIGRATION_FILES).toHaveLength(11);
   });
 
   it('crea tablas core esperadas', async () => {

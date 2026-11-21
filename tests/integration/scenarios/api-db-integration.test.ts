@@ -4,7 +4,7 @@
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { closeTestPool, getTestPool, grantRoleMembership } from '../helpers/db';
-import { insertAuthUser, prepareCleanDatabase } from '../helpers/bootstrap';
+import { insertAuthUser, prepareCleanDatabase, asUser } from '../helpers/bootstrap';
 
 describe('API/DB Integration (SQL contract)', () => {
   const pool = getTestPool();
@@ -53,7 +53,10 @@ describe('API/DB Integration (SQL contract)', () => {
   });
 
   it('RPC create_academic_task_atomic crea task + materials + topics', async () => {
-    const { rows } = await pool.query<{ task_id: string }>(
+    const client = await pool.connect();
+    try {
+      await asUser(client, userId);
+    const { rows } = await client.query<{ task_id: string }>(
       `SELECT task_id FROM create_academic_task_atomic(
          $1, 'Atomic Task', 'Math', 'Body',
          '[{"type":"text","content":"notes"}]'::jsonb,
@@ -62,12 +65,13 @@ describe('API/DB Integration (SQL contract)', () => {
       [userId]
     );
     const taskId = rows[0].task_id;
-    const mats = await pool.query(`SELECT id FROM study_materials WHERE academic_task_id = $1`, [
+    const mats = await client.query(`SELECT id FROM study_materials WHERE academic_task_id = $1`, [
       taskId,
     ]);
-    const topics = await pool.query(`SELECT id FROM topics WHERE academic_task_id = $1`, [taskId]);
+    const topics = await client.query(`SELECT id FROM topics WHERE academic_task_id = $1`, [taskId]);
     expect(mats.rowCount).toBe(1);
     expect(topics.rowCount).toBe(1);
+    } finally { await client.query('RESET ROLE'); client.release(); }
   });
 
   it('CHECK constraints rechazan status/priority inválidos', async () => {
